@@ -1,10 +1,8 @@
-import supabase from "../config/supabase.js";
+// INI UDA TAK SESUAIKAN
+
+import { supabase } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 
-// authRole()                    -> semua akun yang punya profil aktif
-// authRole("admin")             -> admin saja
-// authRole("super_admin")       -> super admin saja
-// authRole("admin","super_admin")
 export const authRole = (...rolesDiizinkan) =>
   wrap(async (req, res, next) => {
     const header = req.headers.authorization || "";
@@ -12,16 +10,24 @@ export const authRole = (...rolesDiizinkan) =>
     if (!token) throw new HttpError(401, "Token tidak ada");
 
     const { data, error } = await supabase.auth.getUser(token);
-    if (error || !data?.user) throw new HttpError(401, "Token tidak valid atau kedaluwarsa");
+    if (error || !data?.user) {
+      throw new HttpError(401, "Token tidak valid atau kedaluwarsa");
+    }
 
     const { data: profil, error: errProfil } = await supabase
       .from("profiles")
-      .select("role, aktif, wilayah_id")
+      .select("role, region, must_change_password, is_active")
       .eq("id", data.user.id)
       .maybeSingle();
-    if (errProfil) throw errProfil;
 
-    if (!profil || !profil.aktif) throw new HttpError(403, "Akun tidak aktif atau bukan admin");
+    if (errProfil) throw errProfil;
+    if (!profil) throw new HttpError(403, "Profil akun tidak ditemukan");
+    
+    // Cek apakah akun dinonaktifkan (Soft Delete)
+    if (profil.is_active === false) {
+      throw new HttpError(403, "Akun Anda telah dinonaktifkan. Silakan hubungi Superadmin");
+    }
+
     if (rolesDiizinkan.length && !rolesDiizinkan.includes(profil.role)) {
       throw new HttpError(403, "Akses ditolak");
     }
@@ -30,7 +36,9 @@ export const authRole = (...rolesDiizinkan) =>
       id: data.user.id,
       email: data.user.email,
       role: profil.role,
-      wilayah_id: profil.wilayah_id, // null untuk super_admin
+      region: profil.region,
+      must_change_password: profil.must_change_password,
     };
+
     next();
   });
