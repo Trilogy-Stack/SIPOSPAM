@@ -2,14 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 
-// Import Rute
-import authRoutes from './src/routes/authRoutes.js';
-import adminRoutes from './routes/adminRoutes.js';
-// import pospamRoutes from './routes/pospamRoutes.js'; // Un-comment jika pospamRoutes sudah dibuat
-// import nomorRoutes from './routes/nomorRoutes.js';   // Un-comment jika nomorRoutes sudah dibuat
+// Import Rute Utama dari folder src/
+import routes from './src/routes/index.js';
 
-// Import Error Handler
-import { errorHandler } from './middleware/errorHandler.js';
+// Import Error Handler dari folder src/
+import { errorHandler } from './src/middleware/errorHandler.js';
 
 dotenv.config();
 
@@ -26,13 +23,10 @@ app.get('/', (req, res) => {
   res.send('API SIPOSPAM Running...');
 });
 
-// Registrasi Rute API
-app.use('/api/auth', authRoutes);
-app.use('/api/admin', adminRoutes);
-// app.use('/api/pospam', pospamRoutes);
-// app.use('/api/nomor-darurat', nomorRoutes);
+// Registrasi Rute API (Otomatis memuat /auth, /admin, /pospam, /nomor-darurat, /wilayah)
+app.use('/api', routes);
 
-// Global Error Handler (WAJIB di paling bawah setelah semua rute)
+// Global Error Handler
 app.use(errorHandler);
 
 app.listen(PORT, () => {
