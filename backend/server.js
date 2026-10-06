@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 
 // Import Rute
-import authRoutes from './routes/authRoutes.js';
+import authRoutes from './src/routes/authRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 // import pospamRoutes from './routes/pospamRoutes.js'; // Un-comment jika pospamRoutes sudah dibuat
 // import nomorRoutes from './routes/nomorRoutes.js';   // Un-comment jika nomorRoutes sudah dibuat
