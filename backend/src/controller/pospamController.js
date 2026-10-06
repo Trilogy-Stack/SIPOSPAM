@@ -1,247 +1,164 @@
-import supabase, { BUCKET_FOTO } from "../config/supabase.js";
+import { supabase, BUCKET_FOTO } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
-import { pastikanMilik } from "../utils/akses.js";
-import { normalisasiNomor, linkWhatsApp, linkMaps } from "../utils/wa.js";
+import { deteksiTipeGambar } from "../middleware/upload.js";
 
-// Lima fasilitas bawaan di form admin. Selain ini = fasilitas tambahan (standar = false).
-const FASILITAS_STANDAR = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
-
-// Kolom `lokasi` (geography) sengaja tidak diambil: hasilnya kode hex, bukan koordinat.
-const KOLOM_DASAR =
-  "id, wilayah_id, nama_pos, nama_koordinator, kontak_koordinator, provinsi, " +
-  "kabupaten_kota, kecamatan, kode_pos, jalan, latitude, longitude";
-
-const KOLOM_DETAIL =
-  `${KOLOM_DASAR}, created_at, updated_at, wilayah:wilayah_id(id, nama), ` +
-  "fasilitas_pospam(id, nama, standar), foto_pospam(id, url, urutan)";
-
-const tambahTautan = (p) => ({
-  ...p,
-  wa_link: linkWhatsApp(
-    p.kontak_koordinator,
-    `Halo petugas ${p.nama_pos}, saya membutuhkan bantuan.`
-  ),
-  maps_link: linkMaps(p.latitude, p.longitude),
-});
+// Helper verifikasi hak akses wilayah
+function pastikanAksesWilayah(reqUser, targetRegion) {
+  if (reqUser.role !== "super_admin" && reqUser.region !== targetRegion) {
+    throw new HttpError(403, "Anda tidak memiliki akses ke data wilayah ini");
+  }
+}
 
 /* ------------------------------------------------------------------ */
-/* Helper                                                              */
+/* Public & Peta                                                      */
 /* ------------------------------------------------------------------ */
 
-async function queryDaftar({ kabupaten_kota, wilayah_id, q, page, limit }) {
+// Daftar pospam (dengan paginasi & pencarian)
+export const listPospam = wrap(async (req, res) => {
+  const { region, q, page = 1, limit = 10 } = req.valid.query;
+
   let query = supabase
     .from("pospam")
-    .select(
-      `${KOLOM_DASAR}, wilayah:wilayah_id(id, nama), fasilitas_pospam(id, nama, standar)`,
-      { count: "exact" }
-    )
-    .order("nama_pos", { ascending: true });
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false });
 
-  if (kabupaten_kota) query = query.eq("kabupaten_kota", kabupaten_kota);
-  if (wilayah_id) query = query.eq("wilayah_id", wilayah_id);
+  if (region) query = query.eq("region", region);
   if (q) {
-    // buang karakter yang punya arti khusus di filter PostgREST
     const aman = q.replace(/[,()%*\\]/g, " ");
-    query = query.or(`nama_pos.ilike.%${aman}%,jalan.ilike.%${aman}%`);
+    query = query.or(`name.ilike.%${aman}%,location.ilike.%${aman}%`);
   }
 
   const dari = (page - 1) * limit;
   const { data, error, count } = await query.range(dari, dari + limit - 1);
   if (error) throw error;
 
-  return {
-    data: data.map(tambahTautan),
-    meta: { page, limit, total: count ?? 0 },
-  };
-}
-
-async function ambilDetail(id) {
-  const { data, error } = await supabase
-    .from("pospam")
-    .select(KOLOM_DETAIL)
-    .eq("id", id)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) throw new HttpError(404, "Pospam tidak ditemukan");
-
-  data.foto_pospam.sort((a, b) => a.urutan - b.urutan);
-  return tambahTautan(data);
-}
-
-// Samakan fasilitas pospam dengan daftar nama dari form:
-// tambah/perbarui yang baru dulu, baru hapus yang sudah tidak ada.
-async function sinkronFasilitas(pospamId, daftarNama) {
-  const baku = new Map(FASILITAS_STANDAR.map((n) => [n.toLowerCase(), n]));
-  const unik = new Map();
-  for (const nama of daftarNama) {
-    const kunci = nama.toLowerCase();
-    if (!unik.has(kunci)) unik.set(kunci, nama);
-  }
-
-  const baris = [...unik.entries()].map(([kunci, nama]) => {
-    const namaBaku = baku.get(kunci);
-    return {
-      pospam_id: pospamId,
-      nama: namaBaku || nama,
-      standar: Boolean(namaBaku),
-    };
+  res.json({
+    data,
+    meta: { page: Number(page), limit: Number(limit), total: count ?? 0 },
   });
-
-  if (baris.length) {
-    const { error } = await supabase
-      .from("fasilitas_pospam")
-      .upsert(baris, { onConflict: "pospam_id,nama" });
-    if (error) throw error;
-  }
-
-  const { data: ada, error: errAda } = await supabase
-    .from("fasilitas_pospam")
-    .select("id, nama")
-    .eq("pospam_id", pospamId);
-  if (errAda) throw errAda;
-
-  const dipertahankan = new Set(baris.map((b) => b.nama));
-  const idHapus = ada.filter((r) => !dipertahankan.has(r.nama)).map((r) => r.id);
-  if (idHapus.length) {
-    const { error } = await supabase.from("fasilitas_pospam").delete().in("id", idHapus);
-    if (error) throw error;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Publik                                                              */
-/* ------------------------------------------------------------------ */
-
-// Daftar pospam (filter daerah/wilayah/pencarian + paginasi)
-export const listPospam = wrap(async (req, res) => {
-  res.json(await queryDaftar(req.valid.query));
 });
 
-// Semua titik untuk peta (ringan: tanpa fasilitas)
+// Titik koordinat untuk visualisasi peta & Coverage Gap (ringan)
 export const petaPospam = wrap(async (req, res) => {
-  const { wilayah_id, kabupaten_kota } = req.valid.query;
+  const { region } = req.valid.query;
+
   let query = supabase
     .from("pospam")
-    .select("id, wilayah_id, nama_pos, latitude, longitude")
+    .select("id, name, region, location, latitude, longitude, facility, photo")
     .limit(1000);
-  if (wilayah_id) query = query.eq("wilayah_id", wilayah_id);
-  if (kabupaten_kota) query = query.eq("kabupaten_kota", kabupaten_kota);
+
+  if (region) query = query.eq("region", region);
 
   const { data, error } = await query;
   if (error) throw error;
+
   res.json({ data });
 });
 
-// Pospam terdekat dari posisi pengguna, urut jarak
-export const getPospamTerdekat = wrap(async (req, res) => {
-  const { lat, lng, batas } = req.valid.query;
-
-  const { data, error } = await supabase.rpc("pospam_terdekat", { lat, lng, batas });
-  if (error) throw error;
-
-  const peta = {};
-  const ids = data.map((r) => r.id);
-  if (ids.length) {
-    const { data: fas, error: errFas } = await supabase
-      .from("fasilitas_pospam")
-      .select("pospam_id, nama, standar")
-      .in("pospam_id", ids);
-    if (errFas) throw errFas;
-    for (const f of fas) {
-      (peta[f.pospam_id] ||= []).push({ nama: f.nama, standar: f.standar });
-    }
-  }
-
-  res.json({
-    data: data.map((r) => tambahTautan({ ...r, fasilitas: peta[r.id] || [] })),
-  });
-});
-
+// Detail single pospam
 export const getPospam = wrap(async (req, res) => {
-  res.json({ data: await ambilDetail(req.valid.params.id) });
-});
-
-/* ------------------------------------------------------------------ */
-/* Admin (hanya wilayah sendiri)                                       */
-/* ------------------------------------------------------------------ */
-
-export const listPospamSaya = wrap(async (req, res) => {
-  res.json(await queryDaftar({ ...req.valid.query, wilayah_id: req.user.wilayah_id }));
-});
-
-export const createPospam = wrap(async (req, res) => {
-  const { fasilitas, ...isi } = req.valid.body;
+  const { id } = req.valid.params;
 
   const { data, error } = await supabase
     .from("pospam")
-    .insert({
-      ...isi,
-      kontak_koordinator: normalisasiNomor(isi.kontak_koordinator),
-      wilayah_id: req.user.wilayah_id, // selalu dari akun, bukan dari body
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (fasilitas?.length) {
-    try {
-      await sinkronFasilitas(data.id, fasilitas);
-    } catch (err) {
-      await supabase.from("pospam").delete().eq("id", data.id); // batalkan
-      throw err;
-    }
+  if (error) throw error;
+  if (!data) throw new HttpError(404, "Pospam tidak ditemukan");
+
+  res.json({ data });
+});
+
+/* ------------------------------------------------------------------ */
+/* Admin Management & Upload Foto                                     */
+/* ------------------------------------------------------------------ */
+
+// Unggah foto fasilitas ke Supabase Storage (Mengembalikan URL Publik)
+export const uploadFotoPospam = wrap(async (req, res) => {
+  if (!req.file) throw new HttpError(400, "Tidak ada berkas foto yang diunggah");
+
+  const infoGambar = deteksiTipeGambar(req.file.buffer);
+  if (!infoGambar) throw new HttpError(400, "Format gambar tidak valid atau korup");
+
+  const namaFile = `pospam/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${infoGambar.ext}`;
+
+  const { data: uploadData, error: uploadErr } = await supabase.storage
+    .from(BUCKET_FOTO || "pospam-photos")
+    .upload(namaFile, req.file.buffer, {
+      contentType: infoGambar.mime,
+      upsert: false,
+    });
+
+  if (uploadErr) throw new HttpError(500, `Gagal upload foto: ${uploadErr.message}`);
+
+  const { data: urlData } = supabase.storage
+    .from(BUCKET_FOTO || "pospam-photos")
+    .getPublicUrl(uploadData.path);
+
+  res.status(201).json({
+    message: "Foto berhasil diunggah",
+    url: urlData.publicUrl,
+  });
+});
+
+export const createPospam = wrap(async (req, res) => {
+  const body = req.valid.body;
+
+  // Jika admin_wilayah, paksa region dari akun login
+  if (req.user.role !== "super_admin") {
+    body.region = req.user.region;
   }
 
-  res.status(201).json({ data: await ambilDetail(data.id) });
+  const { data, error } = await supabase
+    .from("pospam")
+    .insert(body)
+    .select()
+    .single();
+
+  if (error) throw error;
+  res.status(201).json({ message: "Pospam berhasil dibuat", data });
 });
 
 export const updatePospam = wrap(async (req, res) => {
   const { id } = req.valid.params;
-  await pastikanMilik("pospam", id, req.user.wilayah_id);
+  const body = req.valid.body;
 
-  const { fasilitas, ...isi } = req.valid.body;
-  if ("kontak_koordinator" in isi) {
-    isi.kontak_koordinator = normalisasiNomor(isi.kontak_koordinator);
-  }
+  const { data: poslama } = await supabase
+    .from("pospam")
+    .select("region")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (Object.keys(isi).length) {
-    const { error } = await supabase
-      .from("pospam")
-      .update(isi)
-      .eq("id", id)
-      .eq("wilayah_id", req.user.wilayah_id);
-    if (error) throw error;
-  } else if (!fasilitas) {
-    throw new HttpError(400, "Tidak ada data yang diubah");
-  }
+  if (!poslama) throw new HttpError(404, "Pospam tidak ditemukan");
+  pastikanAksesWilayah(req.user, poslama.region);
 
-  if (fasilitas) await sinkronFasilitas(id, fasilitas);
+  const { data, error } = await supabase
+    .from("pospam")
+    .update(body)
+    .eq("id", id)
+    .select()
+    .single();
 
-  res.json({ data: await ambilDetail(id) });
+  if (error) throw error;
+  res.json({ message: "Data pospam berhasil diperbarui", data });
 });
 
 export const deletePospam = wrap(async (req, res) => {
   const { id } = req.valid.params;
-  await pastikanMilik("pospam", id, req.user.wilayah_id);
 
-  const { data: foto } = await supabase
-    .from("foto_pospam")
-    .select("storage_path")
-    .eq("pospam_id", id);
-
-  const { error } = await supabase
+  const { data: poslama } = await supabase
     .from("pospam")
-    .delete()
+    .select("region")
     .eq("id", id)
-    .eq("wilayah_id", req.user.wilayah_id); // foto & fasilitas ikut terhapus (cascade)
+    .maybeSingle();
+
+  if (!poslama) throw new HttpError(404, "Pospam tidak ditemukan");
+  pastikanAksesWilayah(req.user, poslama.region);
+
+  const { error } = await supabase.from("pospam").delete().eq("id", id);
   if (error) throw error;
 
-  if (foto?.length) {
-    const { error: errStorage } = await supabase.storage
-      .from(BUCKET_FOTO)
-      .remove(foto.map((f) => f.storage_path));
-    if (errStorage) console.error("Gagal menghapus file foto:", errStorage.message);
-  }
-
-  res.json({ message: "Pospam dihapus" });
+  res.json({ message: "Pospam berhasil dihapus" });
 });

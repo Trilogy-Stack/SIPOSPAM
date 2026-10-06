@@ -2,31 +2,46 @@ import { Router } from "express";
 import { authRole } from "../middleware/authAdmin.js";
 import { uploadFoto } from "../middleware/upload.js";
 import {
-  validate, idParam, idFotoParam, pospamListQuery, pospamTerdekatQuery,
-  petaQuery, pospamBody, pospamUpdateBody, fotoBody,
+  validate,
+  idParam,
+  pospamListQuery,
+  petaQuery,
+  pospamBody,
+  pospamUpdateBody,
 } from "../middleware/validate.js";
 import {
-  listPospam, petaPospam, getPospamTerdekat, getPospam,
-  listPospamSaya, createPospam, updatePospam, deletePospam,
+  listPospam,
+  petaPospam,
+  getPospam,
+  createPospam,
+  updatePospam,
+  deletePospam,
+  uploadFotoPospam,
 } from "../controller/pospamController.js";
-import { unggahFoto, hapusFoto } from "../controller/fotoPospamController.js";
 
 const router = Router();
 
-// PENTING: route statis (/peta, /terdekat, /saya) harus sebelum "/:id"
+/* ------------------------------------------------------------------ */
+/* RUTE PUBLIK (Bisa diakses siapapun)                                */
+/* ------------------------------------------------------------------ */
+
+// Catatan: Route statis (/peta) WAJIB ditaruh sebelum "/:id"
 router.get("/", validate({ query: pospamListQuery }), listPospam);
 router.get("/peta", validate({ query: petaQuery }), petaPospam);
-router.get("/terdekat", validate({ query: pospamTerdekatQuery }), getPospamTerdekat);
-router.get("/saya", authRole("admin"), validate({ query: pospamListQuery }), listPospamSaya);
 router.get("/:id", validate({ params: idParam }), getPospam);
 
-// Admin (wilayah sendiri)
-router.post("/", authRole("admin"), validate({ body: pospamBody }), createPospam);
-router.put("/:id", authRole("admin"), validate({ params: idParam, body: pospamUpdateBody }), updatePospam);
-router.delete("/:id", authRole("admin"), validate({ params: idParam }), deletePospam);
+/* ------------------------------------------------------------------ */
+/* RUTE TERPROTEKSI (Superadmin & Admin Wilayah)                       */
+/* ------------------------------------------------------------------ */
 
-// Foto: uploadFoto (multer) harus sebelum validate agar req.body terisi
-router.post("/:id/foto", authRole("admin"), uploadFoto, validate({ params: idParam, body: fotoBody }), unggahFoto);
-router.delete("/:id/foto/:fotoId", authRole("admin"), validate({ params: idFotoParam }), hapusFoto);
+router.use(authRole("super_admin", "admin_wilayah"));
+
+// Unggah foto fasilitas ke Storage (Mengembalikan URL gambar)
+router.post("/upload", uploadFoto, uploadFotoPospam);
+
+// CRUD Pospam
+router.post("/", validate({ body: pospamBody }), createPospam);
+router.put("/:id", validate({ params: idParam, body: pospamUpdateBody }), updatePospam);
+router.delete("/:id", validate({ params: idParam }), deletePospam);
 
 export default router;
