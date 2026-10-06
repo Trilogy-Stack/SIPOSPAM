@@ -24,7 +24,7 @@ export default function LoginForm() {
     try {
       await login(email, password);
       const me = await getMe(); // { id, email, role, wilayah }
-      router.push(me.role === "superadmin" ? "/superadmin/dashboard" : "/admin/dashboard");
+      router.push(me.role === "super_admin" ? "/superadmin/dashboard" : "/admin/dashboard");
     } catch (err) {
       setError(err.message || "Login gagal. Periksa email dan password.");
     } finally {
