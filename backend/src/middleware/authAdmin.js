@@ -16,7 +16,7 @@ export const authRole = (...rolesDiizinkan) =>
 
     const { data: profil, error: errProfil } = await supabase
       .from("profiles")
-      .select("role, region, must_change_password, is_active")
+      .select("name, role, region, must_change_password, is_active")
       .eq("id", data.user.id)
       .maybeSingle();
 
@@ -35,6 +35,7 @@ export const authRole = (...rolesDiizinkan) =>
     req.user = {
       id: data.user.id,
       email: data.user.email,
+      name: profil.name,
       role: profil.role,
       region: profil.region,
       must_change_password: profil.must_change_password,

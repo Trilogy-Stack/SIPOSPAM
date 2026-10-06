@@ -71,6 +71,19 @@ export const idParam = z.object({ id: uuid });
 export const idFotoParam = z.object({ id: uuid, fotoId: uuid });
 
 /* ------------------------------------------------------------------ */
+/* Auth Body Schema                                                   */
+/* ------------------------------------------------------------------ */
+
+export const loginBody = z.object({
+  email,
+  password: z.string().min(1, "Password wajib diisi"),
+});
+
+export const gantiPasswordBody = z.object({
+  password_baru: z.string().min(8, "Password minimal 8 karakter").max(72),
+});
+
+/* ------------------------------------------------------------------ */
 /* Query                                                              */
 /* ------------------------------------------------------------------ */
 
@@ -160,13 +173,13 @@ export const adminCreateBody = z.object({
   email,
   password: z.string().min(8, "Password minimal 8 karakter").max(72),
   region: teks(100),
-  role: z.enum(["superadmin", "admin_wilayah"]).default("admin_wilayah"),
+  role: z.enum(["super_admin", "admin_wilayah"]).default("admin_wilayah"),
 });
 
 export const adminUpdateBody = z.object({
   name: teks(100).optional(),
   email: email.optional(),
   region: teks(100).optional(),
-  role: z.enum(["superadmin", "admin_wilayah"]).optional(),
+  role: z.enum(["super_admin", "admin_wilayah"]).optional(),
   is_active: z.boolean().optional(),
 });
