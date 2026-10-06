@@ -1,5 +1,6 @@
+// UDA TAK SESUIAKAN
+
 import multer from "multer";
-import { HttpError } from "../utils/http.js";
 
 export const MAKS_UKURAN = 3 * 1024 * 1024; // 3 MB
 
@@ -9,14 +10,18 @@ const upload = multer({
   fileFilter: (req, file, cb) => {
     const ok = ["image/jpeg", "image/png", "image/webp"].includes(file.mimetype);
     if (ok) return cb(null, true);
-    cb(new HttpError(400, "File harus berupa gambar JPG, PNG, atau WebP"));
+
+    const error = new Error("File harus berupa gambar JPG, PNG, atau WebP");
+    error.status = 400;
+    return cb(error);
   },
 });
 
-// Satu file di field bernama "foto"
-export const uploadFoto = upload.single("foto");
+// Unggah satu file (field 'photo' disamakan dengan DB, 'foto' sebagai opsional)
+export const uploadFoto = upload.single("photo");
+export const uploadFotoAlt = upload.single("foto");
 
-// Cek isi file (magic bytes), karena mimetype dari klien bisa dipalsukan
+// Deteksi tipe gambar via magic bytes (pencegahan pemalsuan MIME)
 export function deteksiTipeGambar(buf) {
   if (!buf || buf.length < 12) return null;
   if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
