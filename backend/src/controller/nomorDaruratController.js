@@ -1,127 +1,103 @@
 import supabase from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
-import { pastikanMilik } from "../utils/akses.js";
-import { linkMaps, linkTelepon } from "../utils/wa.js";
 
-const KOLOM =
-  "id, wilayah_id, nama_instansi, nomor_telepon, kategori, provinsi, kabupaten_kota, " +
-  "kecamatan, kode_pos, jalan, latitude, longitude, created_at, updated_at";
+// Helper verifikasi hak akses wilayah
+function pastikanAksesWilayah(reqUser, targetRegion) {
+  if (reqUser.role !== "super_admin" && reqUser.region !== targetRegion) {
+    throw new HttpError(403, "Anda tidak memiliki akses ke data wilayah ini");
+  }
+}
 
-const tambahTautan = (n) => ({
-  ...n,
-  tel_link: linkTelepon(n.nomor_telepon),
-  maps_link: linkMaps(n.latitude, n.longitude),
-});
+/* ------------------------------------------------------------------ */
+/* Publik                                                             */
+/* ------------------------------------------------------------------ */
 
-async function queryDaftar({ wilayah_id, kategori, q, page, limit }) {
+// Ambil daftar nomor darurat (Bisa filter per region, kategori, pencarian q)
+export const listNomorDarurat = wrap(async (req, res) => {
+  const { region, category, q, page = 1, limit = 10 } = req.valid.query;
+
   let query = supabase
     .from("nomor_darurat")
-    .select(`${KOLOM}, wilayah:wilayah_id(id, nama)`, { count: "exact" })
-    .order("nama_instansi", { ascending: true });
+    .select("*", { count: "exact" })
+    .order("agency_name", { ascending: true });
 
-  if (wilayah_id) query = query.eq("wilayah_id", wilayah_id);
-  if (kategori) query = query.contains("kategori", [kategori]);
+  if (region) query = query.eq("region", region);
+  if (category) query = query.eq("category", category);
   if (q) {
     const aman = q.replace(/[,()%*\\]/g, " ");
-    query = query.or(`nama_instansi.ilike.%${aman}%,jalan.ilike.%${aman}%`);
+    query = query.or(`agency_name.ilike.%${aman}%,telephone.ilike.%${aman}%`);
   }
 
   const dari = (page - 1) * limit;
   const { data, error, count } = await query.range(dari, dari + limit - 1);
   if (error) throw error;
 
-  return {
-    data: data.map(tambahTautan),
-    meta: { page, limit, total: count ?? 0 },
-  };
-}
-
-/* ------------------------------------------------------------------ */
-/* Publik                                                              */
-/* ------------------------------------------------------------------ */
-
-// "Layanan di sekitar anda": pemadam, SPBU, bengkel, RS, polsek, dst.
-export const getNomorDaruratTerdekat = wrap(async (req, res) => {
-  const { lat, lng, radius_m, batas, kategori } = req.valid.query;
-
-  const params = { lat, lng, radius_m, batas };
-  if (kategori) params.kat = kategori;
-
-  const { data, error } = await supabase.rpc("nomor_darurat_terdekat", params);
-  if (error) throw error;
-  res.json({ data: data.map(tambahTautan) });
-});
-
-export const getNomorDarurat = wrap(async (req, res) => {
-  const { data, error } = await supabase
-    .from("nomor_darurat")
-    .select(`${KOLOM}, wilayah:wilayah_id(id, nama)`)
-    .eq("id", req.valid.params.id)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) throw new HttpError(404, "Data tidak ditemukan");
-  res.json({ data: tambahTautan(data) });
+  res.json({
+    data,
+    meta: { page: Number(page), limit: Number(limit), total: count ?? 0 },
+  });
 });
 
 /* ------------------------------------------------------------------ */
-/* Super admin: lihat lintas wilayah                                   */
+/* Admin Management                                                   */
 /* ------------------------------------------------------------------ */
-
-export const listNomorDarurat = wrap(async (req, res) => {
-  res.json(await queryDaftar(req.valid.query));
-});
-
-/* ------------------------------------------------------------------ */
-/* Admin (hanya wilayah sendiri)                                       */
-/* ------------------------------------------------------------------ */
-
-export const listNomorDaruratSaya = wrap(async (req, res) => {
-  res.json(await queryDaftar({ ...req.valid.query, wilayah_id: req.user.wilayah_id }));
-});
 
 export const createNomorDarurat = wrap(async (req, res) => {
-  const isi = req.valid.body;
+  const body = req.valid.body;
+
+  // Jika admin_wilayah, paksa region dari akun login & cegah input "NASIONAL"
+  if (req.user.role !== "super_admin") {
+    body.region = req.user.region;
+  }
+
   const { data, error } = await supabase
     .from("nomor_darurat")
-    .insert({
-      ...isi,
-      kategori: [...new Set(isi.kategori)],
-      wilayah_id: req.user.wilayah_id,
-    })
-    .select(KOLOM)
+    .insert(body)
+    .select()
     .single();
+
   if (error) throw error;
-  res.status(201).json({ data: tambahTautan(data) });
+  res.status(201).json({ message: "Nomor darurat berhasil ditambahkan", data });
 });
 
 export const updateNomorDarurat = wrap(async (req, res) => {
   const { id } = req.valid.params;
-  await pastikanMilik("nomor_darurat", id, req.user.wilayah_id);
+  const body = req.valid.body;
 
-  const isi = { ...req.valid.body };
-  if (!Object.keys(isi).length) throw new HttpError(400, "Tidak ada data yang diubah");
-  if (isi.kategori) isi.kategori = [...new Set(isi.kategori)];
+  const { data: lama } = await supabase
+    .from("nomor_darurat")
+    .select("region")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!lama) throw new HttpError(404, "Nomor darurat tidak ditemukan");
+  pastikanAksesWilayah(req.user, lama.region);
 
   const { data, error } = await supabase
     .from("nomor_darurat")
-    .update(isi)
+    .update(body)
     .eq("id", id)
-    .eq("wilayah_id", req.user.wilayah_id)
-    .select(KOLOM)
+    .select()
     .single();
+
   if (error) throw error;
-  res.json({ data: tambahTautan(data) });
+  res.json({ message: "Nomor darurat berhasil diperbarui", data });
 });
 
 export const deleteNomorDarurat = wrap(async (req, res) => {
   const { id } = req.valid.params;
-  await pastikanMilik("nomor_darurat", id, req.user.wilayah_id);
 
-  const { error } = await supabase
+  const { data: lama } = await supabase
     .from("nomor_darurat")
-    .delete()
+    .select("region")
     .eq("id", id)
-    .eq("wilayah_id", req.user.wilayah_id);
+    .maybeSingle();
+
+  if (!lama) throw new HttpError(404, "Nomor darurat tidak ditemukan");
+  pastikanAksesWilayah(req.user, lama.region);
+
+  const { error } = await supabase.from("nomor_darurat").delete().eq("id", id);
   if (error) throw error;
-  res.json({ message: "Data dihapus" });
+
+  res.json({ message: "Nomor darurat berhasil dihapus" });
 });
