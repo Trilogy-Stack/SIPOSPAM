@@ -1,7 +1,7 @@
-import supabase from "../config/supabase.js";
+import { supabase } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 
-// Terjemahkan error Supabase Auth menjadi pesan yang jelas
+// Helper penanganan error Supabase Auth
 function errorAuth(error) {
   const pesan = (error.message || "").toLowerCase();
   if (error.status === 422 || pesan.includes("already")) {
@@ -16,146 +16,119 @@ function errorAuth(error) {
 async function ambilAdmin(id) {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, email, aktif, created_at, wilayah:wilayah_id(id, nama)")
+    .select("id, name, email, role, region, is_active, must_change_password, created_at")
     .eq("id", id)
-    .eq("role", "admin")
     .maybeSingle();
+
   if (error) throw error;
   if (!data) throw new HttpError(404, "Akun admin tidak ditemukan");
   return data;
 }
 
+// 1. Daftar seluruh akun admin (dengan pencarian nama/email/region)
 export const listAdmin = wrap(async (req, res) => {
   const { q } = req.valid.query;
 
-  // !inner = hanya admin yang wilayahnya cocok dengan pencarian
-  const relasi = q ? "wilayah:wilayah_id!inner(id, nama)" : "wilayah:wilayah_id(id, nama)";
   let query = supabase
     .from("profiles")
-    .select(`id, email, aktif, created_at, ${relasi}`)
-    .eq("role", "admin")
-    .order("created_at", { ascending: true });
+    .select("id, name, email, role, region, is_active, created_at")
+    .order("created_at", { ascending: false });
 
-  if (q) query = query.ilike("wilayah.nama", `%${q.replace(/[%_\\]/g, " ")}%`);
+  if (q) {
+    const aman = q.replace(/[%_\\]/g, " ");
+    query = query.or(`name.ilike.%${aman}%,email.ilike.%${aman}%,region.ilike.%${aman}%`);
+  }
 
   const { data, error } = await query;
   if (error) throw error;
+
   res.json({ data });
 });
 
-// Membuat wilayah + akun Auth + profil. Kalau satu langkah gagal, langkah sebelumnya dibatalkan.
+// 2. Buat akun admin baru (oleh Superadmin)
 export const createAdmin = wrap(async (req, res) => {
-  const { nama_wilayah, email, password } = req.valid.body;
+  const { name, email, password, region, role = "admin_wilayah" } = req.valid.body;
 
-  // 1. Wilayah: pakai yang sudah ada (jika belum punya admin) atau buat baru
-  let wilayah;
-  let wilayahBaru = false;
-
-  const cari = await supabase
-    .from("wilayah")
-    .select("id, nama")
-    .eq("nama", nama_wilayah)
-    .maybeSingle();
-  if (cari.error) throw cari.error;
-
-  if (cari.data) {
-    const adaAdmin = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("role", "admin")
-      .eq("wilayah_id", cari.data.id)
-      .maybeSingle();
-    if (adaAdmin.error) throw adaAdmin.error;
-    if (adaAdmin.data) throw new HttpError(409, "Wilayah ini sudah punya akun admin");
-    wilayah = cari.data;
-  } else {
-    const baru = await supabase
-      .from("wilayah")
-      .insert({ nama: nama_wilayah })
-      .select("id, nama")
-      .single();
-    if (baru.error) throw baru.error;
-    wilayah = baru.data;
-    wilayahBaru = true;
-  }
-
-  const batalkanWilayah = async () => {
-    if (wilayahBaru) await supabase.from("wilayah").delete().eq("id", wilayah.id);
-  };
-
-  // 2. Akun Auth (password di-hash oleh Supabase)
-  const akun = await supabase.auth.admin.createUser({
+  // Step 1: Buat akun di Supabase Auth
+  const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
   });
-  if (akun.error) {
-    await batalkanWilayah();
-    throw errorAuth(akun.error);
-  }
 
-  // 3. Profil
-  const profil = await supabase.from("profiles").insert({
-    id: akun.data.user.id,
+  if (authErr) throw errorAuth(authErr);
+
+  // Step 2: Buat profil terkait di tabel profiles
+  const { error: errProfil } = await supabase.from("profiles").insert({
+    id: authData.user.id,
+    name,
     email,
-    role: "admin",
-    wilayah_id: wilayah.id,
+    region,
+    role,
+    is_active: true,
+    must_change_password: true,
   });
-  if (profil.error) {
-    await supabase.auth.admin.deleteUser(akun.data.user.id);
-    await batalkanWilayah();
-    throw profil.error;
+
+  // Rollback jika simpan profil gagal
+  if (errProfil) {
+    await supabase.auth.admin.deleteUser(authData.user.id);
+    throw errProfil;
   }
 
   res.status(201).json({
-    data: { id: akun.data.user.id, email, aktif: true, wilayah },
+    message: "Akun admin berhasil dibuat",
+    data: {
+      id: authData.user.id,
+      name,
+      email,
+      region,
+      role,
+      is_active: true,
+    },
   });
 });
 
+// 3. Perbarui data admin / ubah status aktif
 export const updateAdmin = wrap(async (req, res) => {
   const { id } = req.valid.params;
-  const { nama_wilayah, email, aktif } = req.valid.body;
+  const { name, email, region, role, is_active } = req.valid.body;
 
-  if (nama_wilayah === undefined && email === undefined && aktif === undefined) {
-    throw new HttpError(400, "Tidak ada data yang diubah");
-  }
+  await ambilAdmin(id); // Memastikan ID ada
 
-  const admin = await ambilAdmin(id); // 404 bila bukan admin
-
+  // Update email di Supabase Auth jika berubah
   if (email !== undefined) {
-    const { error } = await supabase.auth.admin.updateUserById(id, {
+    const { error: errAuth } = await supabase.auth.admin.updateUserById(id, {
       email,
       email_confirm: true,
     });
-    if (error) throw errorAuth(error);
+    if (errAuth) throw errorAuth(errAuth);
   }
 
   const ubahProfil = {};
+  if (name !== undefined) ubahProfil.name = name;
   if (email !== undefined) ubahProfil.email = email;
-  if (aktif !== undefined) ubahProfil.aktif = aktif;
-  if (Object.keys(ubahProfil).length) {
+  if (region !== undefined) ubahProfil.region = region;
+  if (role !== undefined) ubahProfil.role = role;
+  if (is_active !== undefined) ubahProfil.is_active = is_active;
+
+  if (Object.keys(ubahProfil).length > 0) {
     const { error } = await supabase.from("profiles").update(ubahProfil).eq("id", id);
     if (error) throw error;
   }
 
-  if (nama_wilayah !== undefined) {
-    const { error } = await supabase
-      .from("wilayah")
-      .update({ nama: nama_wilayah })
-      .eq("id", admin.wilayah.id);
-    if (error) throw error;
-  }
-
-  res.json({ data: await ambilAdmin(id) });
+  res.json({
+    message: "Data admin berhasil diperbarui",
+    data: await ambilAdmin(id),
+  });
 });
 
-// Menghapus AKUN saja. Wilayah beserta pospam dan nomor daruratnya tetap tersimpan.
+// 4. Hapus akun admin
 export const deleteAdmin = wrap(async (req, res) => {
   const { id } = req.valid.params;
   await ambilAdmin(id);
 
-  const { error } = await supabase.auth.admin.deleteUser(id); // profil ikut terhapus (cascade)
+  const { error } = await supabase.auth.admin.deleteUser(id); // Profil ikut terhapus otomatis (cascade)
   if (error) throw error;
 
-  res.json({ message: "Akun admin dihapus. Data wilayah tetap tersimpan." });
+  res.json({ message: "Akun admin berhasil dihapus" });
 });

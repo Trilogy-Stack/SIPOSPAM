@@ -11,3 +11,6 @@ if (!supabaseUrl || !supabaseKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
+
+export const BUCKET_FOTO = "foto-pospam";
+export default supabase;
