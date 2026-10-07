@@ -1,3 +1,4 @@
+// src/app/superadmin/kelola-admin/page.jsx
 "use client";
 import { useState } from "react";
 import { Plus } from "lucide-react";
@@ -58,19 +59,19 @@ export default function KelolaAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#E9ECF6] px-6 py-8 font-poppins">
-      <div className="mx-auto min-h-[600px] w-full max-w-7xl rounded-xl bg-white px-12 py-10 shadow-sm">
+    <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
+      <div className="mx-auto min-h-[600px] w-full max-w-7xl rounded-xl bg-white px-12 pb-10 pt-8 shadow-sm">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Kelola Admin</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Kelola Admin</h1>
           <button
             onClick={openAdd}
-            className="flex items-center gap-2 rounded bg-[#1BA3BA] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#158aa0]"
+            className="flex items-center gap-2 rounded-md bg-[#1BA3BA] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0]"
           >
-            <Plus size={18} /> Tambah Admin
+            <Plus size={16} /> Tambah Admin
           </button>
         </div>
 
-        <div className="mb-8 mt-5 h-1 rounded bg-gray-400" />
+        <div className="mb-6 mt-4 h-[3px] rounded bg-gray-300" />
 
         {admins.length === 0 ? (
           <EmptyState />
@@ -91,21 +92,21 @@ export default function KelolaAdminPage() {
         onClose={() => setDeleteTarget(null)}
         title="Hapus Akun Admin"
       >
-        <p className="mb-6 text-sm text-gray-700">
+        <p className="mb-6 text-sm leading-relaxed text-gray-600">
           Yakin ingin menghapus akun admin{" "}
-          <span className="font-semibold">{deleteTarget?.wilayah?.nama}</span>?
+          <span className="font-semibold text-gray-900">{deleteTarget?.wilayah?.nama}</span>?
           Tindakan ini tidak dapat dibatalkan.
         </p>
         <div className="flex justify-end gap-3">
           <button
             onClick={() => setDeleteTarget(null)}
-            className="rounded border border-gray-300 px-5 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="rounded-md border border-gray-300 px-5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
           >
             Batal
           </button>
           <button
             onClick={handleConfirmDelete}
-            className="rounded bg-red-600 px-5 py-2 text-sm font-medium text-white hover:bg-red-700"
+            className="rounded-md bg-red-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
           >
             Hapus
           </button>

@@ -32,5 +32,3 @@ export const mockWilayahList = [
     ],
   },
 ];
-
-export const JATENG_BOUNDS = [[-8.3, 108.4], [-5.7, 111.6]];

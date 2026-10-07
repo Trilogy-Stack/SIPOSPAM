@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import Modal from "@/components/shared/ui/Modal";
 import ImageUploadInput from "@/components/shared/ui/ImageUploadInput";
 
+const labelClass = "mb-1.5 block text-sm font-medium text-gray-700";
 const inputClass =
-  "w-full rounded border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 outline-none focus:border-[#1BA3BA]";
+  "w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-[#1BA3BA] focus:ring-1 focus:ring-[#1BA3BA]";
 
 export default function NomorNasionalFormModal({ open, onClose, onSave, editData }) {
   const [nama, setNama] = useState("");
@@ -28,26 +29,26 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
 
   return (
     <Modal open={open} onClose={onClose} title={editData ? "Edit Nomor" : "Tambah Nomor Nasional"}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-base text-gray-900">Ikon Instansi</label>
+          <label className={labelClass}>Ikon Instansi</label>
           <ImageUploadInput
             value={logoUrl}
             onChange={(file, previewUrl) => { setLogoFile(file); setLogoUrl(previewUrl); }}
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base text-gray-900">Nama Instansi</label>
+          <label className={labelClass}>Nama Instansi</label>
           <input
             required
             value={nama}
             onChange={(e) => setNama(e.target.value)}
-            placeholder="Mis. Kepolisian"
+            placeholder="Mis. Layanan Polisi"
             className={inputClass}
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base text-gray-900">Nomor</label>
+          <label className={labelClass}>Nomor</label>
           <input
             required
             value={nomor}
@@ -58,7 +59,7 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
         </div>
         <button
           type="submit"
-          className="mx-auto mt-2 rounded bg-[#0F5BBA] px-10 py-2.5 text-base font-medium text-white transition-colors hover:bg-[#0c4a99]"
+          className="mx-auto mt-3 rounded-md bg-[#0F5BBA] px-10 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0c4a99]"
         >
           Simpan
         </button>

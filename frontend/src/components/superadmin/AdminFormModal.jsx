@@ -1,10 +1,12 @@
+// src/components/superadmin/AdminFormModal.jsx
 "use client";
 import { useEffect, useState } from "react";
 import Modal from "@/components/shared/ui/Modal";
 import PasswordInput from "@/components/shared/ui/PasswordInput";
 
+const labelClass = "mb-1.5 block text-sm font-medium text-gray-700";
 const inputClass =
-  "w-full rounded border border-gray-200 px-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-300 outline-none focus:border-[#1BA3BA]";
+  "w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-[#1BA3BA] focus:ring-1 focus:ring-[#1BA3BA]";
 
 export default function AdminFormModal({ open, onClose, onSave, initialData = null }) {
   const isEdit = !!initialData;
@@ -29,11 +31,13 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? "Edit Akun Admin" : "Tambah Akun Admin"}>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
         <div>
-          <label className="mb-1.5 block text-base text-gray-900">Nama Wilayah</label>
+          <label className={labelClass}>Nama Wilayah</label>
           <input
             required
+            name="nama-wilayah"
+            autoComplete="off"
             value={namaWilayah}
             onChange={(e) => setNamaWilayah(e.target.value)}
             placeholder="Mis. POLRES DEMAK"
@@ -41,10 +45,12 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base text-gray-900">Email</label>
+          <label className={labelClass}>Email</label>
           <input
             type="email"
             required
+            name="admin-email"
+            autoComplete="off"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Mis. polresdemak@gmail.com"
@@ -52,17 +58,18 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
           />
         </div>
         <div>
-          <label className="mb-1.5 block text-base text-gray-900">Password</label>
+          <label className={labelClass}>Password</label>
           <PasswordInput
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required={!isEdit}
+            autoComplete="new-password"
             placeholder={isEdit ? "Kosongkan jika tidak diubah" : "************"}
           />
         </div>
         <button
           type="submit"
-          className="mx-auto mt-2 rounded bg-[#0F5BBA] px-10 py-2.5 text-base font-medium text-white transition-colors hover:bg-[#0c4a99]"
+          className="mx-auto mt-3 rounded-md bg-[#0F5BBA] px-10 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0c4a99]"
         >
           Simpan
         </button>

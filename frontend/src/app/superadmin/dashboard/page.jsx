@@ -19,18 +19,18 @@ export default function SuperadminDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-[#E9ECF6] px-6 py-8 font-poppins">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 rounded-xl bg-white px-12 py-10 shadow-sm">
+    <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 rounded-xl bg-white px-12 pb-10 pt-6 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <SearchBar
-  value={search}
-  onChange={setSearch}
-  options={mockWilayahList.map((w) => w.nama)}
-/>
+            value={search}
+            onChange={setSearch}
+            options={mockWilayahList.map((w) => w.nama)}
+          />
           <StatusIndicator current={filtered.length} total={mockWilayahList.length} />
         </div>
 
-        <div className="h-[430px] overflow-hidden rounded-xl">
+        <div className="h-[calc(100vh-260px)] min-h-[480px] overflow-hidden rounded-md">
           <MapContainer
             wilayahList={mockWilayahList}
             selectedWilayah={selectedWilayah}
@@ -38,11 +38,13 @@ export default function SuperadminDashboard() {
           />
         </div>
 
-        {selectedWilayah ? (
-          <PospamCardList wilayah={selectedWilayah} />
-        ) : (
-          <WilayahAccordion wilayahList={filtered} />
-        )}
+        <div className="mt-4">
+          {selectedWilayah ? (
+            <PospamCardList wilayah={selectedWilayah} />
+          ) : (
+            <WilayahAccordion wilayahList={filtered} />
+          )}
+        </div>
       </div>
     </div>
   );

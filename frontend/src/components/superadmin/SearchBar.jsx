@@ -1,3 +1,4 @@
+// src/components/superadmin/SearchBar.jsx
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
@@ -9,8 +10,12 @@ export default function SearchBar({
   placeholder = "Cari Admin wilayah",
 }) {
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
   const ref = useRef(null);
+  const inputRef = useRef(null);
+  const listRef = useRef(null);
 
+  // Tutup dropdown kalau klik di luar atau tekan Esc
   useEffect(() => {
     const handleClick = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -26,57 +31,112 @@ export default function SearchBar({
     };
   }, []);
 
-  const pick = (nama) => {
-    onChange(nama);
+  // Kalau isi input persis sama dengan salah satu opsi (hasil pilihan),
+  // tampilkan semua opsi lagi, bukan hanya opsi itu
+  const norm = (s) => s.trim().toLowerCase();
+  const exactMatch = options.some((o) => norm(o) === norm(value));
+  const query = exactMatch ? "" : norm(value);
+
+  const filtered = options.filter((o) => o.toLowerCase().includes(query));
+  const items =
+    query === ""
+      ? [{ label: "Semua wilayah", val: "" }, ...filtered.map((o) => ({ label: o, val: o }))]
+      : filtered.map((o) => ({ label: o, val: o }));
+
+  // Gulirkan item yang disorot (navigasi keyboard) agar tetap terlihat
+  useEffect(() => {
+    if (open && active >= 0) {
+      listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
+    }
+  }, [active, open]);
+
+  const pick = (val) => {
+    onChange(val);
     setOpen(false);
+    setActive(-1);
+  };
+
+  const handleInput = (e) => {
+    onChange(e.target.value);
+    setOpen(true);
+    setActive(0); // Enter langsung memilih hasil teratas
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setOpen(true);
+      setActive((a) => Math.min(a + 1, items.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((a) => Math.max(a - 1, 0));
+    } else if (e.key === "Enter" && open && items[active]) {
+      e.preventDefault();
+      pick(items[active].val);
+    } else if (e.key === "Tab") {
+      setOpen(false);
+    }
   };
 
   return (
-    <div ref={ref} className="relative w-full max-w-[470px]">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        className="flex w-full items-center justify-between rounded border border-gray-700 bg-white px-4 py-2.5 text-left text-sm"
-      >
-        <span className={value ? "text-gray-900" : "text-gray-400"}>
-          {value || placeholder}
-        </span>
-        <Search size={22} className="shrink-0 text-gray-900" />
-      </button>
+    <div ref={ref} className="relative w-full max-w-[400px]">
+      <div className="flex w-full items-center rounded-md border border-gray-300 bg-white px-3.5 py-2 transition-colors focus-within:border-[#1BA3BA] focus-within:ring-1 focus-within:ring-[#1BA3BA]">
+        <input
+          ref={inputRef}
+          type="text"
+          role="combobox"
+          aria-expanded={open}
+          aria-autocomplete="list"
+          value={value}
+          onChange={handleInput}
+          onFocus={() => { setOpen(true); setActive(-1); }}
+          onClick={() => setOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          autoComplete="off"
+          className="w-full bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+        />
+        <button
+          type="button"
+          onClick={() => { inputRef.current?.focus(); setOpen(true); }}
+          aria-label="Cari"
+          className="shrink-0 text-gray-900"
+        >
+          <Search size={18} className="text-gray-500" />
+        </button>
+      </div>
 
       {open && (
         <ul
+          ref={listRef}
           role="listbox"
-          className="absolute left-0 right-0 top-full z-[1100] mt-1 max-h-64 overflow-y-auto rounded border border-gray-300 bg-white py-1 shadow-lg"
+          className="absolute left-0 right-0 top-full z-[1100] mt-1 max-h-64 overflow-y-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg"
         >
-          <li>
-            <button
-              type="button"
-              onClick={() => pick("")}
-              className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${
-                value === "" ? "font-semibold text-[#1BA3BA]" : "text-gray-500"
-              }`}
-            >
-              Semua wilayah
-            </button>
-          </li>
-          {options.map((nama) => (
-            <li key={nama}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={value === nama}
-                onClick={() => pick(nama)}
-                className={`w-full px-4 py-2 text-left text-sm uppercase hover:bg-gray-100 ${
-                  value === nama ? "font-semibold text-[#1BA3BA]" : "text-gray-800"
-                }`}
-              >
-                {nama}
-              </button>
-            </li>
-          ))}
+          {items.length === 0 ? (
+            <li className="px-4 py-2 text-sm text-gray-400">Wilayah tidak ditemukan</li>
+          ) : (
+            items.map((item, i) => (
+              <li key={item.label} role="option" aria-selected={value === item.val}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()} // jaga fokus input saat klik
+                  onClick={() => pick(item.val)}
+                  onMouseEnter={() => setActive(i)}
+                  className={`w-full px-3.5 py-2 text-left text-[13px] ${
+                    item.val === "" ? "" : "uppercase"
+                  } ${i === active ? "bg-gray-100" : ""} ${
+                    value === item.val && item.val !== ""
+                      ? "font-semibold text-[#1BA3BA]"
+                      : item.val === ""
+                      ? "text-gray-500"
+                      : "text-gray-800"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              </li>
+            ))
+          )}
         </ul>
       )}
     </div>

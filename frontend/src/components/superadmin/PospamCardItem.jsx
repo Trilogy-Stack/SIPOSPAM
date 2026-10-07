@@ -1,11 +1,12 @@
+// src/components/superadmin/PospamCardItem.jsx
 export default function PospamCardItem({ nomor, pospam }) {
   return (
-    <div className="flex items-stretch overflow-hidden rounded-md border border-gray-100 bg-white shadow-sm">
-      <div className="flex w-14 shrink-0 items-center justify-center bg-[#1BA3BA] text-2xl font-bold text-white">
+    <div className="flex items-stretch overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
+      <div className="flex w-12 shrink-0 items-center justify-center bg-[#1BA3BA] text-lg font-semibold text-white">
         {nomor}
       </div>
-      <div className="flex-1 px-6 py-4">
-        <p className="text-xl font-medium text-gray-900">{pospam.nama}</p>
+      <div className="flex-1 px-5 py-3">
+        <p className="text-base font-semibold text-gray-900">{pospam.nama}</p>
         <p className="text-xs text-gray-500">{pospam.lokasi}</p>
         <div className="mt-2 flex flex-wrap gap-1">
           {pospam.fasilitas.map((f) => (
@@ -18,7 +19,7 @@ export default function PospamCardItem({ nomor, pospam }) {
           ))}
         </div>
       </div>
-      <div className="flex items-start whitespace-nowrap px-6 py-4 text-sm text-gray-800">
+      <div className="flex items-start whitespace-nowrap px-5 py-3 text-sm text-gray-700">
         ({pospam.telepon})
       </div>
     </div>

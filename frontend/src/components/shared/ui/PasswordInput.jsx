@@ -1,3 +1,4 @@
+// src/components/shared/ui/PasswordInput.jsx
 "use client";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
@@ -7,6 +8,7 @@ export default function PasswordInput({
   onChange,
   required = true,
   placeholder = "************",
+  autoComplete, // opsional; form login bisa diisi "current-password"
 }) {
   const [show, setShow] = useState(false);
   return (
@@ -17,13 +19,14 @@ export default function PasswordInput({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full rounded border border-gray-200 px-3 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-300 outline-none focus:border-[#1BA3BA]"
+        autoComplete={autoComplete}
+        className="w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 pr-10 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-[#1BA3BA] focus:ring-1 focus:ring-[#1BA3BA]"
       />
       <button
         type="button"
         onClick={() => setShow((s) => !s)}
         aria-label={show ? "Sembunyikan password" : "Tampilkan password"}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-800"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 transition-colors hover:text-gray-900"
       >
         {show ? <EyeOff size={18} /> : <Eye size={18} />}
       </button>
