@@ -30,27 +30,24 @@ const FACILITY_ICON = {
 // ---------- Normalisasi data backend ----------
 const normalizePospam = (p) => ({
   id: p.id,
-  name: p.name || p.nama_pos || "",
-  coordinator: p.koor_name || p.nama_kordinator || "",
-  phone: p.koor_phone || p.phone || p.no_hp || "",
-  address:
-    p.address ||
-    p.alamat ||
-    [p.street, formatRegion(p.location), p.area].filter(Boolean).join(", "),
-  lat: p.latitude,
-  lng: p.longitude,
+  name: p.name || "",
+  coordinator: p.koor_name || "",
+  phone: p.koor_phone || "",
+  address: [formatRegion(p.location), p.area].filter(Boolean).join(", "),
+  lat: p.latitude ?? null,
+  lng: p.longitude ?? null,
   facilities: p.facility || [],
   photos: p.photo || [],
 });
 
 const normalizeEmergency = (e) => ({
   id: e.id,
-  name: e.name || e.nama_instansi || "",
-  phone: e.phone || e.no_hp || "",
+  name: e.agency_name || "",
+  phone: e.telephone || "",
   address:
     e.address ||
     e.alamat ||
-    [e.street, formatRegion(e.region)].filter(Boolean).join(", "),
+    [e.location, formatRegion(e.region), e.area].filter(Boolean).join(", "),
   category: e.category || "",
   lat: e.lat ?? e.latitude ?? null,
   lng: e.lng ?? e.longitude ?? null,
