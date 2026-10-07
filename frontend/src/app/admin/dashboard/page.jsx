@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { getPospamsApi, getEmergencyApi } from "@/lib/api";
 import { formatRegion } from "@/components/admin/RegionPicker";
 import {
@@ -216,22 +217,29 @@ export default function AdminDashboardPage() {
     <div className="min-h-[calc(100vh-72px)] bg-[#eaedf6] font-sans pb-12">
       <main className="w-[84%] mx-auto pt-5 space-y-4">
         {/* Judul & Tanggal */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <MapPin className="w-8 h-8 text-slate-800 mt-0.5 shrink-0" />
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">
-                Dashboard SIPOSPAM
-              </h1>
-              <p className="text-xs md:text-sm text-slate-600 font-medium mt-0.5">
-                Daftar Pos Pengamanan pada wilayah Anda.
-              </p>
-            </div>
-          </div>
-          <div className="text-xs md:text-sm font-semibold text-slate-800 pt-1">
-            {todayFormatted}
-          </div>
-        </div>
+    <div className="flex items-start justify-between">
+      <div className="flex items-center gap-3">
+      <Image 
+        src="/icons_location.png" 
+        alt="location icon" 
+        width={70} 
+        height={70} 
+        className="shrink-0"
+      />
+    
+    <div>
+      <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">
+        Dashboard SIPOSPAM
+      </h1>
+      <p className="text-xs md:text-sm text-slate-600 font-medium mt-0.5">
+        Daftar Pos Pengamanan pada wilayah Anda.
+      </p>
+    </div>
+  </div>
+  <div className="text-xs md:text-sm font-semibold text-slate-800 pt-1">
+    {todayFormatted}
+  </div>
+</div>
 
         {/* Tombol Menu Utama */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

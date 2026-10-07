@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image"; // Tambahkan import Image
 import {
-  MapPin,
   Plus,
   Flame,
   HeartPulse,
@@ -25,11 +25,8 @@ const CATEGORY_ICON = {
   Bengkel: Wrench,
 };
 
-
-
 const REGION_SIDOREJO = { province: "Jawa Tengah", city: "Kota Salatiga", district: "Sidorejo", postalCode: "50711" };
 const REGION_SIDOMUKTI = { province: "Jawa Tengah", city: "Kota Salatiga", district: "Sidomukti", postalCode: "50721" };
-
 
 // TODO BACKEND: hapus dummy ini, ganti dengan data dari API (useEffect + getEmergencyApi)
 const DUMMY_EMERGENCY = [
@@ -100,34 +97,42 @@ export default function KelolaNomorDaruratPage() {
     }
   };
 
-    const handleDelete = async () => {
+  const handleDelete = async () => {
     // TODO BACKEND: await deleteEmergencyApi(selectedId) lalu refetch daftar
     setList((prev) => prev.filter((x) => x.id !== selectedId));
     setSelectedId(null);
     setMode(null);
-    };
+  };
 
   const inputClass =
-    "w-full border border-slate-200 rounded-md px-3 py-2 text-[11px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
-  const labelClass = "block text-[12px] font-medium text-slate-800 mb-1.5";
+    "w-full border border-slate-200 rounded-md px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
+  const labelClass = "block text-xs font-semibold text-slate-800 mb-1.5";
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-[#eceef7] font-sans pb-10">
       <main className="w-[84%] mx-auto pt-5 space-y-4">
         {/* Judul */}
         <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3">
-            <MapPin className="w-9 h-9 text-slate-600 mt-0.5" />
+          <div className="flex items-center gap-3">
+             {/* Ganti icon MapPin dengan Image at-icons_location.png */}
+            <div className="w-17 h-17 relative shrink-0">
+               <Image 
+                 src="/icons_location.png" 
+                 alt="Location Icon"
+                 fill
+                 className="object-contain"
+               />
+            </div>
             <div>
-              <h1 className="text-lg font-bold text-slate-900 leading-tight">Kelola Nomor Darurat</h1>
-              <p className="text-[11px] text-slate-800 font-semibold">
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">Kelola Nomor Darurat</h1>
+              <p className="text-xs md:text-sm text-slate-600 font-medium mt-0.5">
                 Berisikan nomor, alamat, kategori, wilayah
               </p>
             </div>
           </div>
           <button
             onClick={openAdd}
-            className="bg-[#1a9fb8] hover:bg-[#158aa0] transition text-white text-[11px] font-medium px-4 py-2 rounded-md flex items-center gap-1.5 shadow-sm"
+            className="bg-[#1a9fb8] hover:bg-[#158aa0] transition text-white text-xs font-bold px-4 py-2 rounded-md flex items-center gap-1.5 shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             Tambah Nomor
@@ -151,8 +156,8 @@ export default function KelolaNomorDaruratPage() {
                     <Icon className="w-4 h-4 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-[13px] font-semibold text-slate-900 leading-tight">{item.name}</h3>
-                    <p className="text-[10px] text-slate-700 mt-0.5">({item.phone})</p>
+                    <h3 className="text-xs md:text-sm font-bold text-slate-900 leading-tight">{item.name}</h3>
+                    <p className="text-xs text-slate-700 mt-0.5">({item.phone})</p>
                   </div>
                 </div>
               );
@@ -167,7 +172,7 @@ export default function KelolaNomorDaruratPage() {
                 mode === "edit" ? "border border-slate-400 shadow-sm" : "shadow-sm"
               }`}
             >
-              <h2 className="text-[13px] font-semibold text-slate-800">
+              <h2 className="text-sm md:text-base font-bold text-slate-800">
                 {mode === "add" ? "Tambah Nomor Darurat" : "Lihat & Edit Nomor Darurat"}
               </h2>
 
@@ -184,10 +189,10 @@ export default function KelolaNomorDaruratPage() {
               <div>
                 <label className={labelClass}>Provinsi, Kabupaten/Kota, Kecamatan, Kode Pos</label>
                 <RegionPicker
-                    value={form.region}
-                    onChange={(region) => setForm((f) => ({ ...f, region }))}
+                  value={form.region}
+                  onChange={(region) => setForm((f) => ({ ...f, region }))}
                 />
-                </div>
+              </div>
 
               <div>
                 <label className={labelClass}>Nama Jalan / Titik KM / Patokan</label>
@@ -210,7 +215,7 @@ export default function KelolaNomorDaruratPage() {
                 <label className={`${labelClass} mb-2`}>Kategori</label>
                 <div className="space-y-3">
                   {CATEGORIES.map((cat) => (
-                    <label key={cat} className="flex items-center justify-between text-[11px] text-slate-800 cursor-pointer">
+                    <label key={cat} className="flex items-center justify-between text-xs text-slate-800 cursor-pointer">
                       <span>{cat}</span>
                       <input
                         type="checkbox"
@@ -228,26 +233,26 @@ export default function KelolaNomorDaruratPage() {
                 {mode === "edit" && (
                   <button
                     type="button"
-                   onClick={() => setConfirmOpen(true)}
-                    className="flex-1 bg-[#d9444a] hover:bg-[#c23a40] transition text-white text-[11px] font-semibold py-2 rounded-md"
+                    onClick={() => setConfirmOpen(true)}
+                    className="flex-1 bg-[#d9444a] hover:bg-[#c23a40] transition text-white text-xs font-bold py-2 rounded-md"
                   >
                     Hapus
                   </button>
                 )}
                 <button
                   type="submit"
-                  className="flex-1 bg-[#fbbf24] hover:bg-[#f59e0b] transition text-slate-900 text-[11px] font-semibold py-2 rounded-md"
+                  className="flex-1 bg-[#fbbf24] hover:bg-[#f59e0b] transition text-slate-900 text-xs font-bold py-2 rounded-md"
                 >
                   Simpan
                 </button>
                 <ConfirmDialog
-                    open={confirmOpen}
-                    onCancel={() => setConfirmOpen(false)}
-                    onConfirm={async () => {
-                        setConfirmOpen(false);
-                        await handleDelete();
-                    }}
-                    />
+                  open={confirmOpen}
+                  onCancel={() => setConfirmOpen(false)}
+                  onConfirm={async () => {
+                    setConfirmOpen(false);
+                    await handleDelete();
+                  }}
+                />
               </div>
             </form>
           )}
