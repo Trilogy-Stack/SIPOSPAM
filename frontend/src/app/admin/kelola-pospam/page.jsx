@@ -169,7 +169,7 @@ export default function KelolaPospamPage() {
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-[#eceef7] font-sans pb-10">
-      <main className="max-w-6xl mx-auto px-6 pt-6 space-y-5">
+      <main className="w-[84%] mx-auto pt-5 space-y-4">
         {/* Judul */}
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3">
@@ -437,6 +437,14 @@ export default function KelolaPospamPage() {
                 >
                     Simpan
                 </button>
+                <ConfirmDialog
+                    open={confirmOpen}
+                    onCancel={() => setConfirmOpen(false)}
+                    onConfirm={async () => {
+                        setConfirmOpen(false);
+                        await handleDelete();
+                    }}
+                    />
                 </div>
                 </div>
             </form>
