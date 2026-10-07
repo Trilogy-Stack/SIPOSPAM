@@ -9,9 +9,15 @@ const icon = new L.Icon({
   iconAnchor: [14, 28],
 });
 
-export default function PospamMarker({ pospam }) {
+export default function PospamMarker({ pospam, dimmed = false, onClick }) {
   return (
-    <Marker position={[pospam.lat, pospam.lng]} icon={icon}>
+    <Marker
+      position={[pospam.lat, pospam.lng]}
+      icon={icon}
+      opacity={dimmed ? 0.45 : 1}
+      zIndexOffset={dimmed ? 0 : 1000}
+      eventHandlers={onClick ? { click: onClick } : undefined}
+    >
       <Popup>{pospam.nama}</Popup>
     </Marker>
   );
