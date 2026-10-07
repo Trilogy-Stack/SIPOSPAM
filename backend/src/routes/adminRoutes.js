@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { listAdmin, createAdmin, updateAdmin, deleteAdmin } from "../controller/adminController.js";
+import { listAdmin,createAdmin, updateAdmin, deleteAdmin } from "../controller/adminController.js";
 import { authRole } from "../middleware/authAdmin.js";
 import { validate, idParam, adminListQuery, adminCreateBody, adminUpdateBody } from "../middleware/validate.js";
+// import { createAdminSchema } from "../schema/adminSchema.js";
 
 const router = Router();
 

@@ -45,3 +45,21 @@ export const updateNomorNasional = (id, data) =>
   request(`/api/nomor-nasional/${id}`, { method: "PATCH", body: JSON.stringify(data) });
 export const deleteNomorNasional = (id) =>
   request(`/api/nomor-nasional/${id}`, { method: "DELETE" });
+
+// --- POSPAM ---
+export const getPospamsApi = () => request("/api/pospam");
+export const createPospam = (data) =>
+  request("/api/pospam", { method: "POST", body: JSON.stringify(data) });
+export const updatePospam = (id, data) =>
+  request(`/api/pospam/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+export const deletePospam = (id) =>
+  request(`/api/pospam/${id}`, { method: "DELETE" });
+
+// --- Nomor Darurat / Emergency ---
+export const getEmergencyApi = () => request("/api/emergency");
+export const createEmergency = (data) =>
+  request("/api/emergency", { method: "POST", body: JSON.stringify(data) });
+export const updateEmergency = (id, data) =>
+  request(`/api/emergency/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+export const deleteEmergency = (id) =>
+  request(`/api/emergency/${id}`, { method: "DELETE" });

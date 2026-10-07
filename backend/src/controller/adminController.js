@@ -1,4 +1,4 @@
-import { supabase } from "../config/supabase.js";
+import { supabase, supabaseAdmin } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 
 // Helper penanganan error Supabase Auth
@@ -29,7 +29,7 @@ async function ambilAdmin(id) {
 export const listAdmin = wrap(async (req, res) => {
   const { q } = req.valid.query;
 
-  let query = supabase
+  let query = supabaseAdmin
     .from("profiles")
     .select("id, name, email, role, region, is_active, created_at")
     .order("created_at", { ascending: false });
@@ -49,8 +49,8 @@ export const listAdmin = wrap(async (req, res) => {
 export const createAdmin = wrap(async (req, res) => {
   const { name, email, password, region, role = "admin_wilayah" } = req.valid.body;
 
-  // Step 1: Buat akun di Supabase Auth
-  const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+  // Gunakan supabaseAdmin (bukan supabase biasa)
+  const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
@@ -58,8 +58,8 @@ export const createAdmin = wrap(async (req, res) => {
 
   if (authErr) throw errorAuth(authErr);
 
-  // Step 2: Buat profil terkait di tabel profiles
-  const { error: errProfil } = await supabase.from("profiles").insert({
+  // Simpan profil di tabel profiles pakai client biasa/admin
+  const { error: errProfil } = await supabaseAdmin.from("profiles").insert({
     id: authData.user.id,
     name,
     email,
@@ -69,9 +69,9 @@ export const createAdmin = wrap(async (req, res) => {
     must_change_password: true,
   });
 
-  // Rollback jika simpan profil gagal
+  // Rollback pakai supabaseAdmin jika simpan profil gagal
   if (errProfil) {
-    await supabase.auth.admin.deleteUser(authData.user.id);
+    await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
     throw errProfil;
   }
 
@@ -97,7 +97,7 @@ export const updateAdmin = wrap(async (req, res) => {
 
   // Update email di Supabase Auth jika berubah
   if (email !== undefined) {
-    const { error: errAuth } = await supabase.auth.admin.updateUserById(id, {
+    const { error: errAuth } = await supabaseAdmin.auth.admin.updateUserById(id, {
       email,
       email_confirm: true,
     });
@@ -112,7 +112,7 @@ export const updateAdmin = wrap(async (req, res) => {
   if (is_active !== undefined) ubahProfil.is_active = is_active;
 
   if (Object.keys(ubahProfil).length > 0) {
-    const { error } = await supabase.from("profiles").update(ubahProfil).eq("id", id);
+    const { error } = await supabaseAdmin.from("profiles").update(ubahProfil).eq("id", id);
     if (error) throw error;
   }
 
@@ -127,7 +127,7 @@ export const deleteAdmin = wrap(async (req, res) => {
   const { id } = req.valid.params;
   await ambilAdmin(id);
 
-  const { error } = await supabase.auth.admin.deleteUser(id); // Profil ikut terhapus otomatis (cascade)
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(id); // Profil ikut terhapus otomatis (cascade)
   if (error) throw error;
 
   res.json({ message: "Akun admin berhasil dihapus" });
