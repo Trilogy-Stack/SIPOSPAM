@@ -1,4 +1,4 @@
-import supabase from "../config/supabase.js";
+import supabase, { supabaseAdmin } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 
 // Helper verifikasi hak akses wilayah
@@ -16,7 +16,7 @@ function pastikanAksesWilayah(reqUser, targetRegion) {
 export const listNomorDarurat = wrap(async (req, res) => {
   const { region, category, q, page = 1, limit = 10 } = req.valid.query;
 
-  let query = supabase
+  let query = supabaseAdmin
     .from("nomor_darurat")
     .select("*", { count: "exact" })
     .order("agency_name", { ascending: true });
@@ -50,13 +50,26 @@ export const createNomorDarurat = wrap(async (req, res) => {
     body.region = req.user.region;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("nomor_darurat")
-    .insert(body)
+    .insert({
+      ...body,
+      user_id: req.user.id,
+    })
     .select()
     .single();
 
-  if (error) throw error;
+  // if (error) throw error;
+  if (error) {
+    console.error("=== DETAIL ERROR SUPABASE ===", error);
+    return res.status(500).json({
+      message: "Gagal insert ke Supabase",
+      error_message: error.message,
+      error_details: error.details,
+      error_hint: error.hint,
+    });
+  }
+
   res.status(201).json({ message: "Nomor darurat berhasil ditambahkan", data });
 });
 
@@ -64,7 +77,7 @@ export const updateNomorDarurat = wrap(async (req, res) => {
   const { id } = req.valid.params;
   const body = req.valid.body;
 
-  const { data: lama } = await supabase
+  const { data: lama } = await supabaseAdmin
     .from("nomor_darurat")
     .select("region")
     .eq("id", id)
@@ -73,7 +86,7 @@ export const updateNomorDarurat = wrap(async (req, res) => {
   if (!lama) throw new HttpError(404, "Nomor darurat tidak ditemukan");
   pastikanAksesWilayah(req.user, lama.region);
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("nomor_darurat")
     .update(body)
     .eq("id", id)
@@ -87,7 +100,7 @@ export const updateNomorDarurat = wrap(async (req, res) => {
 export const deleteNomorDarurat = wrap(async (req, res) => {
   const { id } = req.valid.params;
 
-  const { data: lama } = await supabase
+  const { data: lama } = await supabaseAdmin
     .from("nomor_darurat")
     .select("region")
     .eq("id", id)
@@ -96,7 +109,7 @@ export const deleteNomorDarurat = wrap(async (req, res) => {
   if (!lama) throw new HttpError(404, "Nomor darurat tidak ditemukan");
   pastikanAksesWilayah(req.user, lama.region);
 
-  const { error } = await supabase.from("nomor_darurat").delete().eq("id", id);
+  const { error } = await supabaseAdmin.from("nomor_darurat").delete().eq("id", id);
   if (error) throw error;
 
   res.json({ message: "Nomor darurat berhasil dihapus" });
