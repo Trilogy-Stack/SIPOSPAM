@@ -1,6 +1,6 @@
 // INI UDA TAK SESUAIKAN
 
-import { supabase } from "../config/supabase.js";
+import { supabase, supabaseAdmin } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 
 export const authRole = (...rolesDiizinkan) =>
@@ -14,7 +14,7 @@ export const authRole = (...rolesDiizinkan) =>
       throw new HttpError(401, "Token tidak valid atau kedaluwarsa");
     }
 
-    const { data: profil, error: errProfil } = await supabase
+    const { data: profil, error: errProfil } = await supabaseAdmin
       .from("profiles")
       .select("name, role, region, must_change_password, is_active")
       .eq("id", data.user.id)

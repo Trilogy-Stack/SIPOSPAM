@@ -1,4 +1,4 @@
-import { supabase, BUCKET_FOTO } from "../config/supabase.js";
+import { supabase, BUCKET_FOTO, supabaseAdmin } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 import { deteksiTipeGambar } from "../middleware/upload.js";
 
@@ -17,7 +17,7 @@ function pastikanAksesWilayah(reqUser, targetRegion) {
 export const listPospam = wrap(async (req, res) => {
   const { region, q, page = 1, limit = 10 } = req.valid.query;
 
-  let query = supabase
+  let query = supabaseAdmin
     .from("pospam")
     .select("*", { count: "exact" })
     .order("created_at", { ascending: false });
@@ -42,7 +42,7 @@ export const listPospam = wrap(async (req, res) => {
 export const petaPospam = wrap(async (req, res) => {
   const { region } = req.valid.query;
 
-  let query = supabase
+  let query = supabaseAdmin
     .from("pospam")
     .select("id, name, region, location, latitude, longitude, facility, photo")
     .limit(1000);
@@ -59,7 +59,7 @@ export const petaPospam = wrap(async (req, res) => {
 export const getPospam = wrap(async (req, res) => {
   const { id } = req.valid.params;
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("pospam")
     .select("*")
     .eq("id", id)
@@ -84,7 +84,7 @@ export const uploadFotoPospam = wrap(async (req, res) => {
 
   const namaFile = `pospam/${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${infoGambar.ext}`;
 
-  const { data: uploadData, error: uploadErr } = await supabase.storage
+  const { data: uploadData, error: uploadErr } = await supabaseAdmin.storage
     .from(BUCKET_FOTO || "pospam-photos")
     .upload(namaFile, req.file.buffer, {
       contentType: infoGambar.mime,
@@ -93,7 +93,7 @@ export const uploadFotoPospam = wrap(async (req, res) => {
 
   if (uploadErr) throw new HttpError(500, `Gagal upload foto: ${uploadErr.message}`);
 
-  const { data: urlData } = supabase.storage
+  const { data: urlData } = supabaseAdmin.storage
     .from(BUCKET_FOTO || "pospam-photos")
     .getPublicUrl(uploadData.path);
 
@@ -111,9 +111,12 @@ export const createPospam = wrap(async (req, res) => {
     body.region = req.user.region;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("pospam")
-    .insert(body)
+    .insert({
+      ...body,
+      user_id: req.user.id,
+    })
     .select()
     .single();
 
@@ -125,7 +128,7 @@ export const updatePospam = wrap(async (req, res) => {
   const { id } = req.valid.params;
   const body = req.valid.body;
 
-  const { data: poslama } = await supabase
+  const { data: poslama } = await supabaseAdmin
     .from("pospam")
     .select("region")
     .eq("id", id)
@@ -134,7 +137,7 @@ export const updatePospam = wrap(async (req, res) => {
   if (!poslama) throw new HttpError(404, "Pospam tidak ditemukan");
   pastikanAksesWilayah(req.user, poslama.region);
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("pospam")
     .update(body)
     .eq("id", id)
@@ -148,7 +151,7 @@ export const updatePospam = wrap(async (req, res) => {
 export const deletePospam = wrap(async (req, res) => {
   const { id } = req.valid.params;
 
-  const { data: poslama } = await supabase
+  const { data: poslama } = await supabaseAdmin
     .from("pospam")
     .select("region")
     .eq("id", id)
@@ -157,7 +160,7 @@ export const deletePospam = wrap(async (req, res) => {
   if (!poslama) throw new HttpError(404, "Pospam tidak ditemukan");
   pastikanAksesWilayah(req.user, poslama.region);
 
-  const { error } = await supabase.from("pospam").delete().eq("id", id);
+  const { error } = await supabaseAdmin.from("pospam").delete().eq("id", id);
   if (error) throw error;
 
   res.json({ message: "Pospam berhasil dihapus" });

@@ -1,18 +1,7 @@
 import { Router } from "express";
-import {
-  listNomorDarurat,
-  createNomorDarurat,
-  updateNomorDarurat,
-  deleteNomorDarurat,
-} from "../controller/nomorDaruratController.js";
+import { listNomorDarurat, createNomorDarurat, updateNomorDarurat, deleteNomorDarurat } from "../controller/nomorDaruratController.js";
 import { authRole } from "../middleware/authAdmin.js";
-import {
-  validate,
-  idParam,
-  nomorDaruratListQuery,
-  nomorDaruratBody,
-  nomorDaruratUpdateBody,
-} from "../middleware/validate.js";
+import { validate, idParam, nomorDaruratListQuery, nomorDaruratBody, nomorDaruratUpdateBody } from "../middleware/validate.js";
 
 const router = Router();
 

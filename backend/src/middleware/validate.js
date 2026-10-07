@@ -1,9 +1,7 @@
-// INI UDA TAK SESUAIKANNNNNN Y
-
 import { z } from "zod";
 
 /* ------------------------------------------------------------------ */
-/* Helper Validasi                                                   */
+/* Helper Validasi                                                    */
 /* ------------------------------------------------------------------ */
 
 export const validate = (skema) => (req, res, next) => {
@@ -126,7 +124,6 @@ export const adminListQuery = z.object({
 /* Body                                                               */
 /* ------------------------------------------------------------------ */
 
-// Menyesuaikan tabel pospam (name, koor_name, koor_phone, region, location, area, latitude, longitude, facility, photo)
 export const pospamBody = z.object({
   name: teks(150),
   koor_name: opsional(100),
@@ -145,18 +142,54 @@ export const fotoBody = z.object({
   urutan: z.coerce.number().int().min(1).max(4),
 });
 
-// Menyesuaikan tabel nomor_darurat (agency_name, telephone, category, region, location, area, latitude, longitude)
-export const nomorDaruratBody = z.object({
+// Skema dasar nomor darurat sebelum penambahan logika kondisional
+const baseNomorDaruratSchema = z.object({
   agency_name: teks(150),
   telephone: z.string().trim().regex(NOMOR_TELEPON, "Nomor telepon tidak valid"),
-  category: teks(50),
   region: teks(100),
-  location: teks(250),
+  icon: opsional(500),
+  category: opsional(50),
+  location: opsional(250),
   area: opsional(100),
-  latitude: lat,
-  longitude: lng,
+  latitude: lat.optional().nullable(),
+  longitude: lng.optional().nullable(),
 });
-export const nomorDaruratUpdateBody = nomorDaruratBody.partial();
+
+export const nomorDaruratBody = baseNomorDaruratSchema.superRefine((data, ctx) => {
+  // Validasi tambahan khusus jika BUKAN nomor darurat nasional
+  if (data.region !== "NASIONAL") {
+    if (!data.category) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Kategori wajib diisi untuk nomor darurat wilayah",
+        path: ["category"],
+      });
+    }
+    if (!data.location) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Lokasi/alamat wajib diisi untuk nomor darurat wilayah",
+        path: ["location"],
+      });
+    }
+    if (data.latitude === undefined || data.latitude === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Latitude wajib diisi untuk nomor darurat wilayah",
+        path: ["latitude"],
+      });
+    }
+    if (data.longitude === undefined || data.longitude === null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Longitude wajib diisi untuk nomor darurat wilayah",
+        path: ["longitude"],
+      });
+    }
+  }
+});
+
+export const nomorDaruratUpdateBody = baseNomorDaruratSchema.partial();
 
 export const nomorNasionalBody = z.object({
   nama: teks(100),
@@ -167,7 +200,6 @@ export const nomorNasionalBody = z.object({
 });
 export const nomorNasionalUpdateBody = nomorNasionalBody.partial();
 
-// Menyesuaikan tabel profiles (name, email, region, role)
 export const adminCreateBody = z.object({
   name: teks(100),
   email,
