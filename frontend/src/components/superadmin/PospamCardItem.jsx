@@ -8,18 +8,18 @@ export default function PospamCardItem({ nomor, pospam }) {
       <div className="flex-1 px-5 py-3">
         <p className="text-base font-semibold text-gray-900">{pospam.nama}</p>
         <p className="text-xs text-gray-500">{pospam.lokasi}</p>
-        <div className="mt-2 flex flex-wrap gap-1">
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {pospam.fasilitas.map((f) => (
             <span
               key={f}
-              className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600"
+              className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium leading-none text-gray-600"
             >
               {f}
             </span>
           ))}
         </div>
       </div>
-      <div className="flex items-start whitespace-nowrap px-5 py-3 text-sm text-gray-700">
+      <div className="flex items-center whitespace-nowrap px-5 py-3 text-sm text-gray-700">
         ({pospam.telepon})
       </div>
     </div>
