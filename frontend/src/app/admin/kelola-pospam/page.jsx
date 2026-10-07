@@ -1,28 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image"; // Tambahkan import Image
 import { Plus, Camera, Trash2, X } from "lucide-react";
 import RegionPicker, { EMPTY_REGION, formatRegion } from "@/components/admin/RegionPicker";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import {
+  getPospamsApi, 
+  createPospam,
+  updatePospam, 
+  deletePospam,
+  uploadFotoPospam,
+
+} from "@/lib/api";
 
 const DEFAULT_FACILITIES = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
-
-// TODO BACKEND: hapus dummy ini, ganti dengan data dari API (useEffect + getPospamsApi)
-const DUMMY_POSPAM = [
-  {
-    id: 1,
-    name: "Pospam Simpang Pasar Sapi",
-    coordinator: "Andreas",
-    coordinatorPhone: "0813-9111-4668",
-    region: { province: "Jawa Tengah", city: "Kota Salatiga", district: "Sidorejo", postalCode: "50711" },
-    street: "Simpang utama Pasar Sapi",
-    lat: -7.3305,
-    lng: 110.5084,
-    photos: [], // array URL foto dari backend
-    facilities: ["Toilet", "Mushola", "Rest Area", "Kursi Pijat"],
-  },
-];
 
 const emptyForm = {
   name: "",
@@ -37,9 +29,11 @@ const emptyForm = {
 const defaultOptions = DEFAULT_FACILITIES.map((name) => ({ name, custom: false }));
 
 export default function KelolaPospamPage() {
-  const [pospamList, setPospamList] = useState(DUMMY_POSPAM);
+  const [pospamList, setPospamList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState(null); // null | "add" | "edit"
   const [selectedId, setSelectedId] = useState(null);
+  const [currentArea, setCurrentArea] = useState("");
 
   const [form, setForm] = useState(emptyForm);
   const [photos, setPhotos] = useState([]); // { url, file } | null
@@ -52,40 +46,69 @@ export default function KelolaPospamPage() {
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  useEffect(() => {
+  fetchPospam();
+}, []);
+
+// Tambahkan state error di dalam komponen KelolaPospamPage
+const [errorMessage, setErrorMessage] = useState("");
+
+const fetchPospam = async () => {
+  try {
+    setLoading(true);
+    setErrorMessage("");
+
+    const response = await getPospamsApi();
+    const data = Array.isArray(response) ? response : response.data || [];
+
+    setPospamList(data);
+  } catch (error) {
+    console.error("Gagal mengambil data Pospam:", error);
+    setErrorMessage(error.message || "Gagal memuat data.");
+    setPospamList([]);
+  } finally {
+    setLoading(false);
+  }
+};
+
   // ---------- Buka form ----------
   const openAdd = () => {
     cancelAddFacility();
     setForm(emptyForm);
-    setPhotos([null, null, null]);
+    setCurrentArea("");
+    setPhotos([null]); 
     setFacilities([]);
     setFacilityOptions(defaultOptions);
     setSelectedId(null);
     setMode("add");
   };
 
-  const openEdit = (item) => {
-    // TODO BACKEND (opsional): ambil detail lengkap via getPospamByIdApi(item.id)
-    cancelAddFacility();
-    setForm({
-      name: item.name,
-      coordinator: item.coordinator,
-      coordinatorPhone: item.coordinatorPhone,
-      region: item.region,
-      street: item.street,
-      lat: item.lat,
-      lng: item.lng,
-    });
-    setPhotos((item.photos || []).map((url) => ({ url, file: null })));
-    setFacilities(item.facilities);
-    setFacilityOptions([
-      ...defaultOptions,
-      ...item.facilities
-        .filter((f) => !DEFAULT_FACILITIES.includes(f))
-        .map((name) => ({ name, custom: true })),
-    ]);
-    setSelectedId(item.id);
-    setMode("edit");
-  };
+const openEdit = (item) => {
+  cancelAddFacility();
+  const itemFacilities = Array.isArray(item.facility) ? item.facility : [];
+
+  setForm({
+    name: item.name || "",
+    coordinator: item.koor_name || "",
+    coordinatorPhone: item.koor_phone || "",
+    region: EMPTY_REGION,          // picker dikosongkan; alamat lama ditampilkan sebagai teks
+    street: item.location || "",
+    lat: item.latitude ?? emptyForm.lat,
+    lng: item.longitude ?? emptyForm.lng,
+  });
+  setCurrentArea(item.area || item.region || ""); // state baru, lihat di bawah
+
+  setPhotos(Array.isArray(item.photo) ? item.photo.map((url) => ({ url, file: null })) : []);
+  setFacilities(itemFacilities);
+  setFacilityOptions([
+    ...defaultOptions,
+    ...itemFacilities
+      .filter((f) => !DEFAULT_FACILITIES.includes(f))
+      .map((name) => ({ name, custom: true })),
+  ]);
+  setSelectedId(item.id);
+  setMode("edit");
+};
 
   // ---------- Foto ----------
   const setPhoto = (index, file) => {
@@ -127,40 +150,54 @@ export default function KelolaPospamPage() {
   };
 
   // ---------- Simpan & Hapus ----------
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  try {
+    const photo = await Promise.all(
+      photos.filter(Boolean).map((p) => (p.file ? uploadFotoPospam(p.file) : p.url))
+    );
+
+    const areaStr = formatRegion(form.region); // kosong jika belum dipilih
 
     const payload = {
-      ...form,
-      facilities,
-      photos: photos.filter(Boolean),
+      name: form.name,
+      koor_name: form.coordinator,
+      koor_phone: form.coordinatorPhone,
+      location: form.street,
+      latitude: Number(form.lat),
+      longitude: Number(form.lng),
+      facility: facilities,
+      photo,
+      ...(areaStr ? { area: areaStr } : {}),
     };
 
     if (mode === "add") {
-      // TODO BACKEND: await createPospamApi(formData) lalu refetch daftar
-      setPospamList((prev) => [
-        ...prev,
-        { id: Date.now(), ...payload, photos: payload.photos.map((p) => p.url) },
-      ]);
-      setMode(null);
+      // region wajib lolos validasi; untuk admin_wilayah akan ditimpa BE dari akun login
+      await createPospam({ ...payload, region: areaStr || "-" });
     } else {
-      // TODO BACKEND: await updatePospamApi(selectedId, formData) lalu refetch daftar
-      setPospamList((prev) =>
-        prev.map((p) =>
-          p.id === selectedId
-            ? { ...p, ...payload, photos: payload.photos.map((x) => x.url) }
-            : p
-        )
-      );
+      await updatePospam(selectedId, payload); // region sengaja tidak dikirim
     }
-  };
 
-  const handleDelete = async () => {
-    // TODO BACKEND: await deletePospamApi(selectedId) lalu refetch daftar
-    setPospamList((prev) => prev.filter((p) => p.id !== selectedId));
-    setSelectedId(null);
+    await fetchPospam();
     setMode(null);
-  };
+    setSelectedId(null);
+  } catch (error) {
+    console.error("Gagal menyimpan Pospam:", error);
+    alert(`Gagal menyimpan: ${error.message}`);
+  }
+};
+
+const handleDelete = async () => {
+  if (!selectedId) return;
+  try {
+    await deletePospam(selectedId);
+    await fetchPospam();
+    setMode(null);
+    setSelectedId(null);
+  } catch (error) {
+    alert(`Gagal menghapus: ${error.message}`);
+  }
+};
 
   const inputClass =
     "w-full border border-slate-200 rounded-md px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
@@ -214,15 +251,13 @@ export default function KelolaPospamPage() {
                 <div className="px-3 py-3 space-y-1">
                   <h3 className="text-xs md:text-sm font-bold text-slate-900">
                     {item.name}{" "}
-                    <span className="text-xs font-normal text-slate-600">
-                      ({item.coordinatorPhone})
-                    </span>
+                    <span className="text-xs font-normal text-slate-600">({item.koor_phone})</span>
                   </h3>
                   <p className="text-xs text-slate-700">
-                    {item.street}, {formatRegion(item.region)}
+                    {item.location}{item.area ? `, ${item.area}` : ""}
                   </p>
                   <div className="flex flex-wrap gap-1.5 pt-1">
-                    {item.facilities.map((f) => (
+                    {(item.facility || []).map((f) => (
                       <span
                         key={f}
                         className="border border-slate-400 rounded px-2 py-0.5 text-[10px] text-slate-700"
@@ -269,6 +304,11 @@ export default function KelolaPospamPage() {
                   value={form.region}
                   onChange={(region) => setForm((f) => ({ ...f, region }))}
                 />
+                {mode === "edit" && currentArea && (
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Tersimpan: {currentArea} (pilih ulang hanya jika ingin mengubah)
+                  </p>
+                )}
               </div>
 
               <div>

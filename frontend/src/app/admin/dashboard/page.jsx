@@ -36,8 +36,8 @@ const normalizePospam = (p) => ({
   address: [formatRegion(p.location), p.area].filter(Boolean).join(", "),
   lat: p.latitude ?? null,
   lng: p.longitude ?? null,
-  facilities: p.facility || [],
-  photos: p.photo || [],
+  facilities: Array.isArray(p.facility) ? p.facility : [],
+  photos: Array.isArray(p.photo) ? p.photo : [],
 });
 
 const normalizeEmergency = (e) => ({
@@ -49,6 +49,7 @@ const normalizeEmergency = (e) => ({
     e.alamat ||
     [e.location, formatRegion(e.region), e.area].filter(Boolean).join(", "),
   category: e.category || "",
+  icon: e.icon || "",
   lat: e.lat ?? e.latitude ?? null,
   lng: e.lng ?? e.longitude ?? null,
 });

@@ -1,23 +1,53 @@
 // src/lib/api.js
 // ⚠️ ASUMSI: prefix endpoint di backend adalah /api/... (cek backend/src/routes/index.js
 //    punya rekanmu — kalau ternyata beda, cukup ubah BASE_URL di bawah)
+// src/lib/api.js
+import { createClient } from "./supabase";
+
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
 async function request(path, options = {}) {
-  const token = typeof window !== "undefined" ? localStorage.getItem("sb-access-token") : null;
+  const supabase = createClient();
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const token = session?.access_token;
+  if (!token) {
+    if (typeof window !== "undefined") window.location.href = "/login";
+    throw new Error("Session login tidak ditemukan. Silakan login kembali.");
+  }
+
+  // Jangan paksa Content-Type untuk FormData: browser harus mengisinya sendiri (multipart + boundary)
+  const isForm = options.body instanceof FormData;
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(isForm ? {} : { "Content-Type": "application/json" }),
+      Authorization: `Bearer ${token}`,
       ...options.headers,
     },
   });
 
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.message || `Request gagal (${res.status})`);
-  return json.data;
+
+  if (!res.ok) {
+    console.error(
+      `Response backend [${res.status}] ${options.method || "GET"} ${path}:`,
+      JSON.stringify(json, null, 2)
+    );
+    const detail = Array.isArray(json.detail)
+      ? json.detail.map((d) => `${d.field}: ${d.pesan}`).join(", ")
+      : json.error_message || "";
+    throw new Error(
+      [json.message || `Request gagal (${res.status})`, detail].filter(Boolean).join(" - ")
+    );
+  }
+
+  // Response upload berbentuk { message, url } (tanpa key "data")
+  return json.data !== undefined ? json.data : json;
 }
 
 // --- Auth ---
@@ -47,19 +77,26 @@ export const deleteNomorNasional = (id) =>
   request(`/api/nomor-nasional/${id}`, { method: "DELETE" });
 
 // --- POSPAM ---
-export const getPospamsApi = () => request("/api/pospam");
+export const getPospamsApi = () => request("/api/pospam?limit=100"); // sesuaikan batas max di `paging`
 export const createPospam = (data) =>
   request("/api/pospam", { method: "POST", body: JSON.stringify(data) });
 export const updatePospam = (id, data) =>
-  request(`/api/pospam/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  request(`/api/pospam/${id}`, { method: "PUT", body: JSON.stringify(data) });
 export const deletePospam = (id) =>
   request(`/api/pospam/${id}`, { method: "DELETE" });
 
+export const uploadFotoPospam = async (file) => {
+  const fd = new FormData();
+  fd.append("photo", file); // harus "photo", sesuai upload.single("photo")
+  const res = await request("/api/pospam/upload", { method: "POST", body: fd });
+  return res.url;
+};
+
 // --- Nomor Darurat / Emergency ---
-export const getEmergencyApi = () => request("/api/emergency");
+export const getEmergencyApi = () => request("/api/nomor-darurat?limit=100");
 export const createEmergency = (data) =>
-  request("/api/emergency", { method: "POST", body: JSON.stringify(data) });
+  request("/api/nomor-darurat", { method: "POST", body: JSON.stringify(data) });
 export const updateEmergency = (id, data) =>
-  request(`/api/emergency/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  request(`/api/nomor-darurat/${id}`, { method: "PUT", body: JSON.stringify(data) });
 export const deleteEmergency = (id) =>
-  request(`/api/emergency/${id}`, { method: "DELETE" });
+  request(`/api/nomor-darurat/${id}`, { method: "DELETE" });
