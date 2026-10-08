@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import Image from "next/image"; // Tambahkan import Image
 import { Plus, Camera, Trash2, X } from "lucide-react";
-import RegionPicker, { EMPTY_REGION, formatRegion } from "@/components/admin/RegionPicker";
+import RegionPicker, {
+  EMPTY_REGION,
+  formatRegion,
+  regionToQueries,
+  streetToQueries,
+} from "@/components/admin/RegionPicker";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import {
   getPospamsApi, 
@@ -14,6 +19,8 @@ import {
 
 } from "@/lib/api";
 import MapPicker from "@/components/admin/MapPicker";
+import { useAuth } from "@/hooks/useAuth";
+import { getRegionScope } from "@/lib/regionScope";
 
 const DEFAULT_FACILITIES = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
 
@@ -54,21 +61,34 @@ export default function KelolaPospamPage() {
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   const [confirmOpen, setConfirmOpen] = useState(false);
 
+  const focus = regionToQueries(form.region);
+
+  const { profile } = useAuth();
+
   useEffect(() => {
   fetchPospam();
-}, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [profile?.role, profile?.region]);
 
 // Tambahkan state error di dalam komponen KelolaPospamPage
 const [errorMessage, setErrorMessage] = useState("");
 
 const fetchPospam = async () => {
+  const scope = getRegionScope(profile);
+  if (!scope.ready) return; // tunggu profil selesai dimuat
+
+  if (scope.blocked) {
+    setPospamList([]);
+    setErrorMessage("Akun Anda belum memiliki wilayah. Hubungi super admin.");
+    setLoading(false);
+    return;
+  }
+
   try {
     setLoading(true);
     setErrorMessage("");
-
-    const response = await getPospamsApi();
+    const response = await getPospamsApi(scope.params);
     const data = Array.isArray(response) ? response : response.data || [];
-
     setPospamList(data);
   } catch (error) {
     console.error("Gagal mengambil data Pospam:", error);
@@ -332,6 +352,8 @@ const handleDelete = async () => {
                   lat={form.lat}
                   lng={form.lng}
                   onChange={({ lat, lng }) => setForm((f) => ({ ...f, lat, lng }))}
+                  focusQuery={focus.main}
+                  focusFallback={focus.fallback}
                 />
               </div>
               {/* Foto Fasilitas */}

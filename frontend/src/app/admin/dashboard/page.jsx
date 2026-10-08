@@ -16,6 +16,8 @@ import {
   Coffee,
   Check,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { getRegionScope } from "@/lib/regionScope";
 
 const CATEGORIES = ["Bencana", "Medis", "BBM", "Bengkel", "Keamanan"];
 const DEFAULT_FACILITIES = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
@@ -148,6 +150,7 @@ function EmptyDetail() {
 }
 // ---------- Halaman ----------
 export default function AdminDashboardPage() {
+  const { profile } = useAuth();
   const [pospamList, setPospamList] = useState([]);
   const [emergencyList, setEmergencyList] = useState([]);
   const [loadingPospam, setLoadingPospam] = useState(true);
@@ -168,32 +171,44 @@ export default function AdminDashboardPage() {
   });
 
   useEffect(() => {
-    fetchData();
-  }, []);
+  fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [profile?.role, profile?.region]);
 
-  async function fetchData() {
-    try {
-      const data = await getPospamsApi();
-      const arr = Array.isArray(data) ? data : data.data || [];
-      setPospamList(arr.map(normalizePospam));
-    } catch (error) {
-      console.error("Error fetching pospam:", error);
-      setPospamList([]);
-    } finally {
-      setLoadingPospam(false);
-    }
+async function fetchData() {
+  const scope = getRegionScope(profile);
+  if (!scope.ready) return;
 
-    try {
-      const data = await getEmergencyApi();
-      const arr = Array.isArray(data) ? data : data.data || [];
-      setEmergencyList(arr.map(normalizeEmergency));
-    } catch (error) {
-      console.error("Error fetching emergency:", error);
-      setEmergencyList([]);
-    } finally {
-      setLoadingEmergency(false);
-    }
+  if (scope.blocked) {
+    setPospamList([]);
+    setEmergencyList([]);
+    setLoadingPospam(false);
+    setLoadingEmergency(false);
+    return;
   }
+
+  try {
+    const data = await getPospamsApi(scope.params);
+    const arr = Array.isArray(data) ? data : data.data || [];
+    setPospamList(arr.map(normalizePospam));
+  } catch (error) {
+    console.error("Error fetching pospam:", error);
+    setPospamList([]);
+  } finally {
+    setLoadingPospam(false);
+  }
+
+  try {
+    const data = await getEmergencyApi(scope.params);
+    const arr = Array.isArray(data) ? data : data.data || [];
+    setEmergencyList(arr.map(normalizeEmergency));
+  } catch (error) {
+    console.error("Error fetching emergency:", error);
+    setEmergencyList([]);
+  } finally {
+    setLoadingEmergency(false);
+  }
+}
 
   const filteredEmergency = emergencyList.filter((item) =>
     activeCategory ? item.category?.toLowerCase() === activeCategory.toLowerCase() : true

@@ -37,10 +37,10 @@ function placeMarker(s, la, ln, pan) {
   if (pan) map.setView([la, ln], Math.max(map.getZoom(), 16));
 }
 
-export default function MapPicker({ lat, lng, onChange }) {
+export default function MapPicker({ lat, lng, onChange, focusQuery = "", focusFallback = "" , searchRequest = null }) {
   const containerRef = useRef(null);
   const stateRef = useRef({ L: null, map: null, marker: null, onChange });
-
+  const focusToken = useRef(0);
   const [ready, setReady] = useState(false);
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
@@ -98,24 +98,95 @@ export default function MapPicker({ lat, lng, onChange }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sinkronkan pin kalau lat/lng berubah dari luar (misalnya saat buka data edit)
-  useEffect(() => {
-    const s = stateRef.current;
-    if (!ready || !s.map) return;
+  // Pindahkan peta ke jalan/patokan yang dicari (pin tidak ditaruh otomatis)
+useEffect(() => {
+  const s = stateRef.current;
+  if (!ready || !s.map || !searchRequest?.queries?.length) return;
 
-    if (!hasPoint) {
-      if (s.marker) {
-        s.marker.remove();
-        s.marker = null;
+  const token = ++focusToken.current;
+  setError("");
+
+  (async () => {
+    for (const q of searchRequest.queries) {
+      try {
+        const r = await geocode(q);
+        if (token !== focusToken.current) return;
+        if (!r) continue;
+
+        if (r.boundingbox) {
+          const [south, north, west, east] = r.boundingbox.map(Number);
+          s.map.fitBounds(s.L.latLngBounds([south, west], [north, east]), {
+            maxZoom: 17,
+            animate: true,
+          });
+        } else {
+          s.map.setView([parseFloat(r.lat), parseFloat(r.lon)], 17, { animate: true });
+        }
+        return;
+      } catch {
+        // coba kata kunci berikutnya
       }
-      return;
     }
+    if (token === focusToken.current) {
+      setError("Jalan/patokan tidak ditemukan di peta. Klik peta untuk menentukan titik secara manual.");
+    }
+  })();
+}, [searchRequest, ready]);
 
-    const cur = s.marker?.getLatLng();
-    if (!cur || Math.abs(cur.lat - la) > 1e-7 || Math.abs(cur.lng - ln) > 1e-7) {
-      placeMarker(s, la, ln, true);
+  // Sinkronkan pin kalau lat/lng berubah dari luar (misalnya saat buka data edit)
+useEffect(() => {
+  const s = stateRef.current;
+  if (!ready || !s.map) return;
+
+  if (!hasPoint) {
+    if (s.marker) {
+      s.marker.remove();
+      s.marker = null;
+      s.map.setView(DEFAULT_CENTER, 13); // form dikosongkan → peta kembali ke posisi awal
     }
-  }, [la, ln, hasPoint, ready]);
+    return;
+  }
+
+  const cur = s.marker?.getLatLng();
+  if (!cur || Math.abs(cur.lat - la) > 1e-7 || Math.abs(cur.lng - ln) > 1e-7) {
+    placeMarker(s, la, ln, true);
+  }
+}, [la, ln, hasPoint, ready]);
+
+// Arahkan peta ke wilayah yang dipilih (kecamatan, lalu cadangan kab/kota)
+useEffect(() => {
+  const s = stateRef.current;
+  if (!ready || !s.map || !focusQuery) return;
+
+  const token = ++focusToken.current; // abaikan hasil lama jika pilihan berubah cepat
+
+  (async () => {
+    for (const q of [focusQuery, focusFallback].filter(Boolean)) {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=id&accept-language=id&q=${encodeURIComponent(q)}`
+        );
+        const data = await res.json();
+        if (token !== focusToken.current) return;
+        if (!data.length) continue;
+
+        const r = data[0];
+        if (r.boundingbox) {
+          const [south, north, west, east] = r.boundingbox.map(Number);
+          s.map.fitBounds(s.L.latLngBounds([south, west], [north, east]), {
+            maxZoom: 15,
+            animate: true,
+          });
+        } else {
+          s.map.setView([parseFloat(r.lat), parseFloat(r.lon)], 14, { animate: true });
+        }
+        return;
+      } catch {
+        // coba kata kunci berikutnya
+      }
+    }
+  })();
+}, [focusQuery, focusFallback, ready]);
 
   const goTo = (a, b) => {
     placeMarker(stateRef.current, a, b, true);

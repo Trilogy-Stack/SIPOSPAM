@@ -1,29 +1,42 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
-import { getWilayahList } from "@/lib/api";
+import rawWilayah from "@/data/kabupaten_kota_kecamatan.json";
 
 const PROVINCE = "Jawa Tengah";
 
-let cachedData = null;
+// "KABUPATEN CILACAP" → "Kab. Cilacap", "KOTA SALATIGA" → "Kota Salatiga"
+const titleCase = (s) => s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+const formatCity = (s) => titleCase(s).replace(/^Kabupaten /, "Kab. ");
 
-// TODO BACKEND: ganti data contoh ini dengan data wilayah dari API
-// (kab/kota → kecamatan → kode pos). Kode pos di bawah hanya contoh.
-const REGION_DATA = {
-  "Kota Salatiga": ["Sidorejo", "Argomulyo", "Tingkir", "Sidomukti"],
-  "Kab. Semarang": ["Ungaran Barat", "Ungaran Timur"],
-  "Kab. Demak": ["Demak"],
-  "Kab. Boyolali": ["Boyolali"],
-};
+// Disiapkan sekali saat file dimuat: nama dirapikan, duplikat dibuang, diurutkan
+const WILAYAH = Object.entries(rawWilayah)
+  .map(([city, districts]) => ({
+    city: formatCity(city),
+    districts: [...new Set(districts.map(titleCase))].sort((a, b) =>
+      a.localeCompare(b, "id")
+    ),
+  }))
+  .sort((a, b) => a.city.localeCompare(b.city, "id"));
 
 export const EMPTY_REGION = { province: PROVINCE, city: "", district: "" };
 
-// Teks yang ditampilkan: "Sidorejo, Kota Salatiga"
+// Teks yang ditampilkan dan dikirim ke backend: "Sidorejo, Kota Salatiga"
 export const formatRegion = (r) => {
   if (!r) return "";
   if (typeof r === "string") return r;
   return r.district ? `${r.district}, ${r.city}` : "";
+};
+
+// Kata kunci pencarian peta dari wilayah yang dipilih
+export const regionToQueries = (r) => {
+  if (!r || typeof r === "string" || !r.district) return { main: "", fallback: "" };
+  const city = r.city.replace(/^Kab\. /, "Kabupaten ");
+  return {
+    main: `Kecamatan ${r.district}, ${city}, Jawa Tengah, Indonesia`,
+    fallback: `${city}, Jawa Tengah, Indonesia`,
+  };
 };
 
 const TABS = [
@@ -38,30 +51,32 @@ export default function RegionPicker({ value, onChange, required = true }) {
   const [draft, setDraft] = useState(EMPTY_REGION);
 
   const openPicker = () => {
-  setDraft(value?.district ? value : EMPTY_REGION);
-  setTab("city");
-  setSearch("");
-  setOpen(true);
-};
+    setDraft(value?.district ? value : EMPTY_REGION);
+    setTab("city");
+    setSearch("");
+    setOpen(true);
+  };
 
-const options = useMemo(() => {
-  const list =
-    tab === "city" ? Object.keys(REGION_DATA) : REGION_DATA[draft.city] || [];
-  return list.filter((o) => o.toLowerCase().includes(search.toLowerCase()));
-}, [tab, draft, search]);
+  const options = useMemo(() => {
+    const list =
+      tab === "city"
+        ? WILAYAH.map((w) => w.city)
+        : WILAYAH.find((w) => w.city === draft.city)?.districts || [];
+    return list.filter((o) => o.toLowerCase().includes(search.toLowerCase()));
+  }, [tab, draft.city, search]);
 
-const canOpenTab = (key) => key === "city" || (key === "district" && draft.city);
+  const canOpenTab = (key) => key === "city" || (key === "district" && draft.city);
 
-const pick = (opt) => {
-  setSearch("");
-  if (tab === "city") {
-    setDraft({ ...EMPTY_REGION, city: opt });
-    setTab("district");
-  } else {
-    onChange({ ...draft, district: opt }); // kecamatan dipilih → selesai
-    setOpen(false);
-  }
-};
+  const pick = (opt) => {
+    setSearch("");
+    if (tab === "city") {
+      setDraft({ ...EMPTY_REGION, city: opt });
+      setTab("district");
+    } else {
+      onChange({ ...draft, district: opt }); // kecamatan dipilih → selesai
+      setOpen(false);
+    }
+  };
 
   const text = formatRegion(value);
   const activeTab = TABS.find((t) => t.key === tab);

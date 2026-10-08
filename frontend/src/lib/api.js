@@ -77,7 +77,10 @@ export const deleteNomorNasional = (id) =>
   request(`/api/nomor-nasional/${id}`, { method: "DELETE" });
 
 // --- POSPAM ---
-export const getPospamsApi = () => request("/api/pospam?limit=100"); // sesuaikan batas max di `paging`
+export const getPospamsApi = (params = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request(`/api/pospam${qs ? `?${qs}` : ""}`);
+};
 export const createPospam = (data) =>
   request("/api/pospam", { method: "POST", body: JSON.stringify(data) });
 export const updatePospam = (id, data) =>
@@ -93,7 +96,10 @@ export const uploadFotoPospam = async (file) => {
 };
 
 // --- Nomor Darurat / Emergency ---
-export const getEmergencyApi = () => request("/api/nomor-darurat?limit=100");
+export const getEmergencyApi = (params = {}) => {
+  const qs = new URLSearchParams(params).toString();
+  return request(`/api/nomor-darurat${qs ? `?${qs}` : ""}`);
+};
 export const createEmergency = (data) =>
   request("/api/nomor-darurat", { method: "POST", body: JSON.stringify(data) });
 export const updateEmergency = (id, data) =>
