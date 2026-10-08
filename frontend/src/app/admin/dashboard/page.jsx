@@ -88,9 +88,9 @@ function MapEmbed({ lat, lng }) {
 
 function Row({ label, children }) {
   return (
-    <div className="grid grid-cols-[120px_1fr] gap-1 text-xs text-slate-800">
-      <span className="font-semibold">{label}</span>
-      <span>: {children}</span>
+    <div className="grid grid-cols-[110px_1fr] md:grid-cols-[130px_1fr] gap-1 text-xs md:text-sm">
+      <span className="font-semibold text-slate-800">{label}</span>
+      <span className="text-slate-600 font-medium">: {children}</span>
     </div>
   );
 }
@@ -140,13 +140,12 @@ function PageSize({ value, onChange }) {
 
 function EmptyDetail() {
   return (
-    <div className="h-full min-h-[250px] flex flex-col items-center justify-center text-center gap-1">
-      <p className="text-xs font-semibold text-slate-600">Tidak ada Detail Informasi Pengadu</p>
+    <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center gap-1">
+      <p className="text-xs md:text-sm font-semibold text-slate-600">Tidak ada Detail Informasi Pengadu</p>
       <p className="text-xs text-slate-400">Pilih salah satu data pengaduan dari daftar</p>
     </div>
   );
 }
-
 // ---------- Halaman ----------
 export default function AdminDashboardPage() {
   const [pospamList, setPospamList] = useState([]);
@@ -296,15 +295,13 @@ export default function AdminDashboardPage() {
           {/* Detail Pospam */}
           <div className={cardClass}>
             {selectedPospam ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <h2 className="text-sm md:text-base font-bold text-slate-800">
                   Detail Lokasi {selectedPospam.name}
                 </h2>
                 <MapEmbed lat={selectedPospam.lat} lng={selectedPospam.lng} />
 
-                <h3 className="text-xs md:text-sm font-bold text-slate-900 pt-2">
-                  Detail Informasi Pengadu
-                </h3>
+                <h3 className="text-sm md:text-base font-bold text-slate-900 pt-1">Detail Informasi Pengadu</h3>
                 <div className="space-y-1.5">
                   <Row label="Nama Kordinator">{selectedPospam.coordinator || "-"}</Row>
                   <Row label="Alamat">{selectedPospam.address || "-"}</Row>
@@ -314,7 +311,7 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {defaultFacilities.length > 0 && (
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs text-slate-800">
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs md:text-sm text-slate-600 font-medium">
                     {defaultFacilities.map((f) => {
                       const Icon = FACILITY_ICON[f] || Check;
                       return (
@@ -329,8 +326,8 @@ export default function AdminDashboardPage() {
 
                 {otherFacilities.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-slate-800 mb-1">Fasilitas Lainnya:</p>
-                    <ol className="grid grid-flow-col grid-rows-3 gap-x-6 text-xs text-slate-800 list-none">
+                    <p className="text-xs md:text-sm font-semibold text-slate-800 mb-1.5">Fasilitas Lainnya:</p>
+                    <ol className="grid grid-flow-col grid-rows-3 gap-x-6 gap-y-1 text-xs md:text-sm text-slate-600 font-medium list-none">
                       {otherFacilities.map((f, i) => (
                         <li key={f}>
                           {i + 1}. {f}
@@ -341,18 +338,18 @@ export default function AdminDashboardPage() {
                 )}
 
                 {photos.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2 pt-2">
+                  <div className="grid grid-cols-4 gap-2 pt-1">
                     {visiblePhotos.map((url, i) => {
                       const isLast = !showAllPhotos && i === 3 && photos.length > 4;
                       return (
-                        <div key={url + i} className="relative h-16 rounded-lg overflow-hidden border border-slate-200">
+                        <div key={url + i} className="relative h-16 md:h-20 rounded overflow-hidden">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={url} alt="" className="w-full h-full object-cover" />
                           {isLast && (
                             <button
                               type="button"
                               onClick={() => setShowAllPhotos(true)}
-                              className="absolute inset-0 bg-black/60 text-white text-[10px] font-semibold flex items-center justify-center text-center p-1"
+                              className="absolute inset-0 bg-white/70 text-[10px] md:text-xs font-semibold text-slate-800"
                             >
                               Lihat Lainnya
                             </button>
@@ -425,25 +422,23 @@ export default function AdminDashboardPage() {
           {/* Detail Nomor Darurat */}
           <div className={cardClass}>
             {selectedEmergency ? (
-              <div className="space-y-4">
-                <h2 className="text-sm md:text-base font-bold text-slate-800">
+              <div className="space-y-3">
+                 <h2 className="text-sm md:text-base font-bold text-slate-800">
                   Detail Lokasi {selectedEmergency.name}
                 </h2>
                 <MapEmbed lat={selectedEmergency.lat} lng={selectedEmergency.lng} />
 
-                <h3 className="text-xs md:text-sm font-bold text-slate-900 pt-2">
-                  Detail Instansi
-                </h3>
+                <h3 className="text-sm md:text-base font-bold text-slate-900 pt-1">Detail Instansi</h3>
                 <div className="space-y-2">
                   <Row label="Nama Instansi">{selectedEmergency.name || "-"}</Row>
                   <Row label="Alamat">{selectedEmergency.address || "-"}</Row>
                   <Row label="Nomor">{selectedEmergency.phone || "-"}</Row>
-                  <div className="grid grid-cols-[120px_1fr] gap-1 text-xs text-slate-800 items-center">
-                    <span className="font-semibold">Kategori</span>
-                    <span>
+                   <div className="grid grid-cols-[110px_1fr] md:grid-cols-[130px_1fr] gap-1 text-xs md:text-sm items-center">
+                      <span className="font-semibold text-slate-800">Kategori</span>
+                      <span className="text-slate-600 font-medium">
                       :{" "}
                       {selectedEmergency.category ? (
-                        <span className="inline-block bg-slate-200 text-slate-700 font-medium rounded-full px-4 py-0.5 ml-1 text-xs">
+                        <span className="inline-block bg-slate-200 text-slate-700 rounded-full px-5 py-1 ml-1">
                           {selectedEmergency.category}
                         </span>
                       ) : (

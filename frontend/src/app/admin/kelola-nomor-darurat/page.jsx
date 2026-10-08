@@ -159,8 +159,8 @@ const fetchList = async () => {
 };
 
   const inputClass =
-    "w-full border border-slate-200 rounded-md px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
-  const labelClass = "block text-xs font-semibold text-slate-800 mb-1.5";
+  "w-full border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
+  const labelClass = "block text-xs md:text-sm text-slate-600 font-medium mb-1.5";
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-[#eceef7] font-sans pb-10">
@@ -208,14 +208,14 @@ const fetchList = async () => {
                 <div
                 key={item.id}
                 onClick={() => openEdit(item)}
-                className={`bg-white rounded-md shadow flex overflow-hidden cursor-pointer border-2 transition ${
+                className={`bg-white rounded-md shadow flex items-center gap-3 px-3 py-3.5 cursor-pointer border-2 transition ${
                   selectedId === item.id ? "border-[#2563eb]" : "border-transparent hover:border-slate-200"
                 }`}
               >
-                  <div className="w-9 h-9 rounded-full bg-[#1a9fb8] flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4 text-white" />
+                  <div className="w-10 h-10 rounded-full bg-[#1a9fb8] flex items-center justify-center shrink-0">
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <div>
+                  <div div className="min-w-0">
                     <h3 className="text-xs md:text-sm font-bold text-slate-900 leading-tight">{item.agency_name}</h3>
                     <p className="text-xs text-slate-700 mt-0.5">({item.telephone})</p>
                   </div>
@@ -247,13 +247,13 @@ const fetchList = async () => {
               </div>
 
               <div>
-                <label className={labelClass}>Provinsi, Kabupaten/Kota, Kecamatan, Kode Pos</label>
+                <label className={labelClass}>Provinsi, Kabupaten/Kota, Kecamatan</label>
                 <RegionPicker
                   value={form.region}
                   onChange={(region) => setForm((f) => ({ ...f, region }))}
                 />
                 {mode === "edit" && currentArea && (
-                  <p className="text-[11px] text-slate-500 mt-1">
+                  <p className="text-xs md:text-sm text-slate-600 mt-1.5">
                     Tersimpan: {currentArea} (pilih ulang hanya jika ingin mengubah)
                   </p>
                 )}
@@ -280,7 +280,7 @@ const fetchList = async () => {
                 <label className={`${labelClass} mb-2`}>Kategori</label>
                 <div className="space-y-3">
                   {CATEGORIES.map((cat) => (
-                    <label key={cat} className="flex items-center justify-between text-xs text-slate-800 cursor-pointer">
+                    <label key={cat} className="flex items-center justify-between text-xs md:text-sm text-slate-600 font-medium cursor-pointer">
                       <span>{cat}</span>
                       <input
                         type="checkbox"

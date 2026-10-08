@@ -13,6 +13,7 @@ import {
   uploadFotoPospam,
 
 } from "@/lib/api";
+import MapPicker from "@/components/admin/MapPicker";
 
 const DEFAULT_FACILITIES = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
 
@@ -22,11 +23,18 @@ const emptyForm = {
   coordinatorPhone: "",
   region: EMPTY_REGION,
   street: "",
-  lat: -7.3305,
-  lng: 110.5084,
+  lat: null,
+  lng: null,
 };
 
 const defaultOptions = DEFAULT_FACILITIES.map((name) => ({ name, custom: false }));
+
+const buildOptions = (extra = []) => [
+  ...defaultOptions,
+  ...[...new Set(extra)]
+    .filter((n) => !DEFAULT_FACILITIES.includes(n))
+    .map((name) => ({ name, custom: true })),
+];
 
 export default function KelolaPospamPage() {
   const [pospamList, setPospamList] = useState([]);
@@ -71,6 +79,7 @@ const fetchPospam = async () => {
   }
 };
 
+  const allFacilityNames = pospamList.flatMap((p) => p.facility || []);
   // ---------- Buka form ----------
   const openAdd = () => {
     cancelAddFacility();
@@ -78,7 +87,7 @@ const fetchPospam = async () => {
     setCurrentArea("");
     setPhotos([null]); 
     setFacilities([]);
-    setFacilityOptions(defaultOptions);
+    setFacilityOptions(buildOptions(allFacilityNames));
     setSelectedId(null);
     setMode("add");
   };
@@ -93,19 +102,14 @@ const openEdit = (item) => {
     coordinatorPhone: item.koor_phone || "",
     region: EMPTY_REGION,          // picker dikosongkan; alamat lama ditampilkan sebagai teks
     street: item.location || "",
-    lat: item.latitude ?? emptyForm.lat,
-    lng: item.longitude ?? emptyForm.lng,
+    lat: item.latitude ?? null,
+    lng: item.longitude ?? null,
   });
   setCurrentArea(item.area || item.region || ""); // state baru, lihat di bawah
 
   setPhotos(Array.isArray(item.photo) ? item.photo.map((url) => ({ url, file: null })) : []);
   setFacilities(itemFacilities);
-  setFacilityOptions([
-    ...defaultOptions,
-    ...itemFacilities
-      .filter((f) => !DEFAULT_FACILITIES.includes(f))
-      .map((name) => ({ name, custom: true })),
-  ]);
+  setFacilityOptions(buildOptions([...allFacilityNames, ...itemFacilities]));
   setSelectedId(item.id);
   setMode("edit");
 };
@@ -157,6 +161,11 @@ const handleSubmit = async (e) => {
       photos.filter(Boolean).map((p) => (p.file ? uploadFotoPospam(p.file) : p.url))
     );
 
+    if (form.lat == null || form.lng == null) {
+      alert("Tentukan lokasi pospam pada peta (klik peta atau geser pin).");
+      return;
+    }
+
     const areaStr = formatRegion(form.region); // kosong jika belum dipilih
 
     const payload = {
@@ -200,8 +209,8 @@ const handleDelete = async () => {
 };
 
   const inputClass =
-    "w-full border border-slate-200 rounded-md px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
-  const labelClass = "block text-xs font-semibold text-slate-800 mb-1.5";
+    "w-full border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
+  const labelClass = "block text-xs md:text-sm text-slate-600 font-medium mb-1.5";
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-[#eceef7] font-sans pb-10">
@@ -234,7 +243,7 @@ const handleDelete = async () => {
           </button>
         </div>
 
-        <div className={mode ? "grid grid-cols-1 lg:grid-cols-2 gap-5 items-start" : ""}>
+        <div className={mode ? "grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-5 items-start" : ""}>
           {/* Daftar Pospam */}
           <div className="space-y-3">
             {pospamList.map((item, index) => (
@@ -245,23 +254,22 @@ const handleDelete = async () => {
                   selectedId === item.id ? "border-[#2563eb]" : "border-transparent hover:border-slate-200"
                 }`}
               >
-                <div className="bg-[#1a9fb8] text-white font-bold text-xs md:text-sm w-10 flex items-center justify-center shrink-0">
+                <div className="bg-[#1a9fb8] text-white font-bold text-sm w-12 flex items-center justify-center shrink-0">
                   {index + 1}
                 </div>
-                <div className="px-3 py-3 space-y-1">
-                  <h3 className="text-xs md:text-sm font-bold text-slate-900">
+                <div className="px-4 py-3.5 space-y-1.5">
+                  <h3 className="text-sm md:text-base font-semibold text-slate-900">
                     {item.name}{" "}
                     <span className="text-xs font-normal text-slate-600">({item.koor_phone})</span>
                   </h3>
-                  <p className="text-xs text-slate-700">
+                  <p className="text-xs md:text-sm text-slate-700">
                     {item.location}{item.area ? `, ${item.area}` : ""}
                   </p>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
+                  <div className="flex flex-wrap gap-2 pt-1">
                     {(item.facility || []).map((f) => (
                       <span
                         key={f}
-                        className="border border-slate-400 rounded px-2 py-0.5 text-[10px] text-slate-700"
-                      >
+                        className="border border-slate-400 rounded px-2.5 py-0.5 text-[11px] md:text-xs text-slate-700">
                         {f}
                       </span>
                     ))}
@@ -299,13 +307,14 @@ const handleDelete = async () => {
               </div>
 
               <div>
-                <label className={labelClass}>Provinsi, Kabupaten/Kota, Kecamatan, Kode Pos</label>
+                <label className={labelClass}>Kabupaten/Kota, Kecamatan</label>
                 <RegionPicker
+                  required={mode === "add" || !currentArea}
                   value={form.region}
                   onChange={(region) => setForm((f) => ({ ...f, region }))}
                 />
                 {mode === "edit" && currentArea && (
-                  <p className="text-[11px] text-slate-500 mt-1">
+                  <p className="text-xs md:text-sm text-slate-600 mt-1.5">
                     Tersimpan: {currentArea} (pilih ulang hanya jika ingin mengubah)
                   </p>
                 )}
@@ -317,16 +326,14 @@ const handleDelete = async () => {
               </div>
 
               {/* Peta */}
-              <div className="rounded-md overflow-hidden border border-slate-200 h-[150px]">
-                {/* TODO: ganti dengan map picker (Leaflet / Google Maps API) agar pin bisa digeser dan lat/lng tersimpan */}
-                <iframe
-                  title="Peta lokasi"
-                  className="w-full h-full"
-                  loading="lazy"
-                  src={`https://maps.google.com/maps?q=${form.lat},${form.lng}&z=15&output=embed`}
+              <div>
+                <label className={labelClass}>Titik Lokasi di Peta</label>
+                <MapPicker
+                  lat={form.lat}
+                  lng={form.lng}
+                  onChange={({ lat, lng }) => setForm((f) => ({ ...f, lat, lng }))}
                 />
               </div>
-
               {/* Foto Fasilitas */}
               <div>
                 <label className={labelClass}>Foto Fasilitas</label>
@@ -442,7 +449,7 @@ const handleDelete = async () => {
                   {facilityOptions.map(({ name, custom }) => (
                     <div
                       key={name}
-                      className="flex items-center justify-between text-xs text-slate-800"
+                      className="flex items-center justify-between text-xs md:text-sm text-slate-600 font-medium"
                     >
                       <span>{name}</span>
 
@@ -454,14 +461,17 @@ const handleDelete = async () => {
                           className="w-4 h-4 rounded cursor-pointer accent-blue-700"
                         />
 
-                        {custom && (
+                        {custom ? (
                           <button
                             type="button"
                             onClick={() => removeFacilityOption(name)}
                             className="text-red-500 hover:text-red-700"
+                            title="Hapus fasilitas"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
+                        ) : (
+                          <span className="w-3.5" /> // ruang kosong agar checkbox sejajar dengan baris yang punya tong sampah
                         )}
                       </div>
                     </div>
