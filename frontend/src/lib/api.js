@@ -1,12 +1,13 @@
 // src/lib/api.js
-// ⚠️ ASUMSI: prefix endpoint di backend adalah /api/... (cek backend/src/routes/index.js
-//    punya rekanmu — kalau ternyata beda, cukup ubah BASE_URL di bawah)
-// src/lib/api.js
 import { createClient } from "./supabase";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
+// options.requireAuth (default true, perilaku sama seperti sebelumnya).
+// Set false untuk endpoint publik (halaman pemudik) agar tidak dipaksa ke /login.
 async function request(path, options = {}) {
+  const { requireAuth = true, ...fetchOptions } = options;
+
   const supabase = createClient();
 
   const {
@@ -14,20 +15,20 @@ async function request(path, options = {}) {
   } = await supabase.auth.getSession();
 
   const token = session?.access_token;
-  if (!token) {
+  if (!token && requireAuth) {
     if (typeof window !== "undefined") window.location.href = "/login";
     throw new Error("Session login tidak ditemukan. Silakan login kembali.");
   }
 
   // Jangan paksa Content-Type untuk FormData: browser harus mengisinya sendiri (multipart + boundary)
-  const isForm = options.body instanceof FormData;
+  const isForm = fetchOptions.body instanceof FormData;
 
   const res = await fetch(`${BASE_URL}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers: {
       ...(isForm ? {} : { "Content-Type": "application/json" }),
-      Authorization: `Bearer ${token}`,
-      ...options.headers,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...fetchOptions.headers,
     },
   });
 
@@ -35,7 +36,7 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     console.error(
-      `Response backend [${res.status}] ${options.method || "GET"} ${path}:`,
+      `Response backend [${res.status}] ${fetchOptions.method || "GET"} ${path}:`,
       JSON.stringify(json, null, 2)
     );
     const detail = Array.isArray(json.detail)
@@ -59,24 +60,34 @@ export const getAdminList = (q = "") =>
 export const createAdmin = (data) =>
   request("/api/admin", { method: "POST", body: JSON.stringify(data) });
 export const updateAdmin = (id, data) =>
-  request(`/api/admin/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  request(`/api/admin/${id}`, { method: "PUT", body: JSON.stringify(data) });
 export const deleteAdmin = (id) =>
   request(`/api/admin/${id}`, { method: "DELETE" });
 
-// --- Wilayah ---
-export const getWilayahList = () => request("/api/wilayah");
+// --- Wilayah (GET publik) ---
+export const getWilayahList = () => request("/api/wilayah", { requireAuth: false });
 
-// --- Nomor Nasional ---
-export const getNomorNasionalPublic = () => request("/api/nomor-nasional");
-export const getNomorNasionalAll = () => request("/api/nomor-nasional/semua");
+// --- Nomor Nasional = tabel nomor_darurat dengan region "NASIONAL" ---
+export const NASIONAL = "NASIONAL";
+
+// GET publik; limit maksimal di BE = 100
+export const getNomorNasionalAll = () =>
+  request(`/api/nomor-darurat?region=${NASIONAL}&limit=100`, { requireAuth: false });
+export const getNomorNasionalPublic = getNomorNasionalAll; // alias lama, jaga-jaga masih dipakai
+
 export const createNomorNasional = (data) =>
-  request("/api/nomor-nasional", { method: "POST", body: JSON.stringify(data) });
+  request("/api/nomor-darurat", {
+    method: "POST",
+    body: JSON.stringify({ ...data, region: NASIONAL }),
+  });
 export const updateNomorNasional = (id, data) =>
-  request(`/api/nomor-nasional/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  request(`/api/nomor-darurat/${id}`, { method: "PUT", body: JSON.stringify(data) });
 export const deleteNomorNasional = (id) =>
-  request(`/api/nomor-nasional/${id}`, { method: "DELETE" });
+  request(`/api/nomor-darurat/${id}`, { method: "DELETE" });
 
-// --- POSPAM ---
+// ======================================================================
+// --- POSPAM (dari BE, tidak diubah) ---
+// ======================================================================
 export const getPospamsApi = (params = {}) => {
   const qs = new URLSearchParams(params).toString();
   return request(`/api/pospam${qs ? `?${qs}` : ""}`);
@@ -95,7 +106,24 @@ export const uploadFotoPospam = async (file) => {
   return res.url;
 };
 
-// --- Nomor Darurat / Emergency ---
+// Tambahan dari saya (terpisah dari blok teman): ambil semua pospam bertahap
+// karena BE membatasi per halaman.
+export async function getPospamAll() {
+  const limit = 100;
+  const all = [];
+  for (let page = 1; page <= 20; page++) {
+    const rows = await request(`/api/pospam?page=${page}&limit=${limit}`, {
+      requireAuth: false,
+    });
+    all.push(...rows);
+    if (rows.length < limit) break;
+  }
+  return all;
+}
+
+// ======================================================================
+// --- Nomor Darurat / Emergency (dari BE, tidak diubah) ---
+// ======================================================================
 export const getEmergencyApi = (params = {}) => {
   const qs = new URLSearchParams(params).toString();
   return request(`/api/nomor-darurat${qs ? `?${qs}` : ""}`);

@@ -7,7 +7,6 @@ import RegionPicker, {
   EMPTY_REGION,
   formatRegion,
   regionToQueries,
-  streetToQueries,
 } from "@/components/admin/RegionPicker";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import {
@@ -263,9 +262,28 @@ const handleDelete = async () => {
           </button>
         </div>
 
-        <div className={mode ? "grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-5 items-start" : ""}>
-          {/* Daftar Pospam */}
+        <div className={mode ? "grid grid-cols-1 lg:grid-cols-2 gap-5 items-start" : ""}>
+          {/* Daftar Nomor Darurat */}
           <div className="space-y-3">
+            {loading && (
+              <div className="py-45 text-center">
+                <p className="text-sm md:text-base text-slate-500">Memuat data...</p>
+              </div>
+            )}
+            {errorMessage && (
+              <div className="py-45 text-center">
+                <p className="text-sm md:text-base text-red-500">{errorMessage}</p>
+              </div>
+            )}
+            {!loading && !errorMessage && pospamList.length === 0 && (
+                <div className="py-45 text-center">
+                  <p className="text-base md:text-lg font-semibold text-slate-600">Belum ada data pospam</p>
+                  <p className="text-xs md:text-sm text-slate-500 mt-1">
+                    Klik tombol "Tambah Pospam" untuk menambahkan data pertama.
+                  </p>
+                </div>
+              )}
+
             {pospamList.map((item, index) => (
               <div
                 key={item.id}
@@ -323,7 +341,22 @@ const handleDelete = async () => {
 
               <div>
                 <label className={labelClass}>Nomor Kontak Kordinator</label>
-                <input className={inputClass} placeholder="085234817293" value={form.coordinatorPhone} onChange={setField("coordinatorPhone")} required />
+                <input
+                  className={inputClass}
+                  inputMode="numeric"
+                  maxLength={15}
+                  pattern="[0-9]{10,15}"
+                  title="Nomor harus 10 sampai 15 angka"
+                  placeholder="085234817293"
+                  value={form.telephone}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      phone: e.target.value.replace(/\D/g, "").slice(0, 15),
+                    }))
+                  }
+                  required
+                />
               </div>
 
               <div>

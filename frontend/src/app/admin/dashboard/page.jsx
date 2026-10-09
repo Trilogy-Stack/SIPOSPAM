@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getRegionScope } from "@/lib/regionScope";
+import PhotoLightbox from "@/components/admin/PhotoLightbox";
 
 const CATEGORIES = ["Bencana", "Medis", "BBM", "Bengkel", "Keamanan"];
 const DEFAULT_FACILITIES = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
@@ -161,7 +162,7 @@ export default function AdminDashboardPage() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [pageSizePospam, setPageSizePospam] = useState("10");
   const [pageSizeEmergency, setPageSizeEmergency] = useState("10");
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
 
   const todayFormatted = new Date().toLocaleDateString("id-ID", {
     weekday: "long",
@@ -221,7 +222,6 @@ async function fetchData() {
     ? selectedPospam.facilities.filter((f) => DEFAULT_FACILITIES.includes(f))
     : [];
   const photos = selectedPospam?.photos || [];
-  const visiblePhotos = showAllPhotos ? photos : photos.slice(0, 4);
 
   const cardClass = "bg-white rounded-xl shadow-sm p-5 border border-slate-100";
 
@@ -234,8 +234,8 @@ async function fetchData() {
       <Image 
         src="/icons_location.png" 
         alt="location icon" 
-        width={70} 
-        height={70} 
+        width={68} 
+        height={68} 
         className="shrink-0"
       />
     
@@ -295,7 +295,6 @@ async function fetchData() {
                       selected={selectedPospam?.id === item.id}
                       onClick={() => {
                         setSelectedPospam(item);
-                        setShowAllPhotos(false);
                       }}
                     />
                   ))}
@@ -326,12 +325,12 @@ async function fetchData() {
                 </div>
 
                 {defaultFacilities.length > 0 && (
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs md:text-sm text-slate-600 font-medium">
+                  <div className="grid grid-flow-col grid-rows-3 auto-cols-fr gap-x-6 gap-y-2.5 text-xs md:text-sm text-slate-600 font-medium">
                     {defaultFacilities.map((f) => {
                       const Icon = FACILITY_ICON[f] || Check;
                       return (
                         <span key={f} className="flex items-center gap-2">
-                          <Icon className="w-4 h-4 shrink-0 text-slate-600" />
+                          <Icon className="w-4 h-4 shrink-0" />
                           {f}
                         </span>
                       );
@@ -354,26 +353,40 @@ async function fetchData() {
 
                 {photos.length > 0 && (
                   <div className="grid grid-cols-4 gap-2 pt-1">
-                    {visiblePhotos.map((url, i) => {
-                      const isLast = !showAllPhotos && i === 3 && photos.length > 4;
+                    {photos.slice(0, 4).map((url, i) => {
+                      const extra = photos.length - 4;
+                      const showMore = i === 3 && extra > 0;
                       return (
-                        <div key={url + i} className="relative h-16 md:h-20 rounded overflow-hidden">
+                        <button
+                          key={url + i}
+                          type="button"
+                          onClick={() => setLightboxIndex(i)}
+                          title="Klik untuk melihat foto"
+                          className="group relative aspect-square rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-[#1a9fb8]"
+                        >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={url} alt="" className="w-full h-full object-cover" />
-                          {isLast && (
-                            <button
-                              type="button"
-                              onClick={() => setShowAllPhotos(true)}
-                              className="absolute inset-0 bg-white/70 text-[10px] md:text-xs font-semibold text-slate-800"
-                            >
-                              Lihat Lainnya
-                            </button>
+                          <img
+                            src={url}
+                            alt={`Foto fasilitas ${i + 1}`}
+                            className="w-full h-full object-cover transition group-hover:scale-105"
+                          />
+                          {showMore && (
+                            <span className="absolute inset-0 bg-black/55 text-white text-sm md:text-base font-semibold flex items-center justify-center">
+                              +{extra}
+                            </span>
                           )}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
                 )}
+
+                <PhotoLightbox
+                  photos={photos}
+                  index={lightboxIndex}
+                  onClose={() => setLightboxIndex(null)}
+                  onChange={setLightboxIndex}
+                />
               </div>
             ) : (
               <EmptyDetail />

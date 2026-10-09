@@ -29,7 +29,7 @@ import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { getRegionScope } from "@/lib/regionScope";
 
-const CATEGORIES = ["Bencana", "Medis", "Keamanan", "BBM", "Bengkel"];
+const CATEGORIES = ["Bencana", "Medis", "Keamanan", "BBM", "Bengkel", "Lainnya"];
 
 const CATEGORY_ICON = {
   Bencana: Flame,
@@ -37,6 +37,7 @@ const CATEGORY_ICON = {
   Keamanan: Shield,
   BBM: Fuel,
   Bengkel: Wrench,
+  Lainnya: Phone,
 };
 
 const toDbCategory = (cat) => (cat ? cat.toLowerCase() : "");
@@ -225,11 +226,24 @@ const fetchList = async () => {
         <div className={mode ? "grid grid-cols-1 lg:grid-cols-2 gap-5 items-start" : ""}>
           {/* Daftar Nomor Darurat */}
           <div className="space-y-3">
-            {loading && <p className="text-xs text-slate-500">Memuat data...</p>}
-            {errorMessage && <p className="text-xs text-red-500">{errorMessage}</p>}
-            {!loading && !errorMessage && list.length === 0 && (
-              <p className="text-xs text-slate-500">Belum ada data.</p>
+            {loading && (
+              <div className="py-45 text-center">
+                <p className="text-sm md:text-base text-slate-500">Memuat data...</p>
+              </div>
             )}
+            {errorMessage && (
+              <div className="py-45 text-center">
+                <p className="text-sm md:text-base text-red-500">{errorMessage}</p>
+              </div>
+            )}
+            {!loading && !errorMessage && list.length === 0 && (
+                <div className="py-45 text-center">
+                  <p className="text-base md:text-lg font-semibold text-slate-600">Belum ada data nomor darurat</p>
+                  <p className="text-xs md:text-sm text-slate-500 mt-1">
+                    Klik tombol "Tambah Nomor" untuk menambahkan data pertama.
+                  </p>
+                </div>
+              )}
 
             {list.map((item) => {
               const Icon = CATEGORY_ICON[toUiCategory(item.category)] || Phone;
