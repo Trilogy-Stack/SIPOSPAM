@@ -139,13 +139,13 @@ export const pospamBody = z.object({
 export const pospamUpdateBody = pospamBody.partial();
 
 export const fotoBody = z.object({
-  urutan: z.coerce.number().int().min(1).max(10),
+  urutan: z.coerce.number().int().min(1).max(4),
 });
 
 // Skema dasar nomor darurat sebelum penambahan logika kondisional
 const baseNomorDaruratSchema = z.object({
   agency_name: teks(150),
-  telephone: z.string().regex(/^\d{10,15}$/, "Nomor harus 10–15 angka"),
+  telephone: z.string().trim().regex(NOMOR_TELEPON, "Nomor telepon tidak valid"), 
   region: teks(100),
   icon: opsional(500),
   category: opsional(50),
@@ -193,7 +193,7 @@ export const nomorDaruratUpdateBody = baseNomorDaruratSchema.partial();
 
 export const nomorNasionalBody = z.object({
   nama: teks(100),
-  nomor: z.string().trim().regex(/^\d{10,15}$/, "Nomor harus 10–15 angka"),
+  nomor: z.string().trim().regex(NOMOR_TELEPON, "Nomor tidak valid"),
   logo_url: opsional(300),
   urutan: z.coerce.number().int().min(0).optional(),
   aktif: z.boolean().optional(),
