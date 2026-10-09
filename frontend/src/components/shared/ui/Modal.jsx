@@ -27,7 +27,7 @@ export default function Modal({ open, onClose, title, children }) {
         aria-label={title}
         className="w-full max-w-md rounded-xl bg-white px-7 py-6 shadow-2xl"
       >
-        <h2 className="mb-5 border-b border-gray-200 pb-3 text-lg font-semibold text-gray-900">
+        <h2 className="mb-5 border-b border-gray-200 pb-3 text-center text-lg font-semibold text-gray-900">
           {title}
         </h2>
         {children}

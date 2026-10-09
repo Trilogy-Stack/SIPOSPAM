@@ -1,31 +1,47 @@
 // src/components/shared/ui/ImageUploadInput.jsx
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ImagePlus } from "lucide-react";
 
 export default function ImageUploadInput({ value, onChange }) {
-  const [preview, setPreview] = useState(value || null);
+  const [broken, setBroken] = useState(false);
+  const preview = value && !broken ? value : null;
+
+  // Reset status gambar rusak setiap nilai berganti
+  useEffect(() => {
+    setBroken(false);
+  }, [value]);
 
   function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const localUrl = URL.createObjectURL(file); // preview sementara di browser
-    setPreview(localUrl);
-    onChange(file, localUrl); // file asli dikirim ke parent untuk nanti di-upload ke Supabase Storage
+    // pratinjau sementara di browser; file asli diunggah induk saat tombol Simpan ditekan
+    onChange(file, URL.createObjectURL(file));
+    e.target.value = ""; // memilih file yang sama dua kali tetap memicu onChange
   }
 
   return (
     <div className="flex items-center gap-4">
       <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-[#F8F8FA]">
         {preview ? (
-          <img src={preview} alt="preview" className="h-full w-full object-contain" />
+          <img
+            src={preview}
+            alt="preview"
+            onError={() => setBroken(true)}
+            className="h-full w-full object-contain"
+          />
         ) : (
           <ImagePlus size={20} className="text-gray-400" />
         )}
       </div>
       <label className="cursor-pointer rounded-md border border-[#1BA3BA] px-3.5 py-1.5 text-sm font-medium text-[#1BA3BA] transition-colors hover:bg-[#1BA3BA] hover:text-white">
         {preview ? "Ganti ikon" : "Unggah ikon"}
-        <input type="file" accept="image/*" onChange={handleFile} className="hidden" />
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleFile}
+          className="hidden"
+        />
       </label>
     </div>
   );

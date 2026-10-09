@@ -14,7 +14,7 @@ function errorAuth(error) {
 }
 
 async function ambilAdmin(id) {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("profiles")
     .select("id, name, email, role, region, is_active, must_change_password, created_at")
     .eq("id", id)

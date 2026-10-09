@@ -1,38 +1,124 @@
 // src/app/superadmin/nomor-nasional/page.jsx
 "use client";
-import { useState } from "react";
-import { Plus } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import NomorNasionalTable from "@/components/superadmin/NomorNasionalTable";
 import NomorNasionalFormModal from "@/components/superadmin/NomorNasionalFormModal";
-import Modal from "@/components/shared/ui/Modal";
-import { mockNomorNasional } from "@/mocks/nomorNasional";
+import EmptyState from "@/components/superadmin/EmptyState";
+import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
+import {
+  getNomorNasionalAll,
+  createNomorNasional,
+  updateNomorNasional,
+  deleteNomorNasional,
+} from "@/lib/api";
+import { uploadNomorIcon } from "@/lib/uploadIcon";
+
+// Data BE (tabel nomor_darurat) -> bentuk yang dipakai komponen UI
+const fromApi = (r) => ({
+  id: r.id,
+  nama: r.agency_name,
+  nomor: r.telephone,
+  logoUrl: r.icon,
+});
 
 export default function NomorNasionalPage() {
-  const [data, setData] = useState(mockNomorNasional);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
   const [modalOpen, setModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
+
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
-  function handleSave(item) {
-    if (item.id) {
-      setData((prev) => prev.map((d) => (d.id === item.id ? { ...d, ...item } : d)));
-    } else {
-      setData((prev) => [...prev, { ...item, id: String(prev.length + 1), urutan: prev.length + 1, aktif: true }]);
+  const [notice, setNotice] = useState(null); // { type: "success" | "error", text }
+
+  const load = useCallback(async () => {
+    setLoadError("");
+    try {
+      const rows = await getNomorNasionalAll();
+      setData((rows ?? []).map(fromApi));
+    } catch (err) {
+      setLoadError(err.message || "Gagal memuat nomor nasional");
+    } finally {
+      setLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // Notifikasi hilang sendiri setelah beberapa detik
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4500);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  function openAdd() {
+    setEditData(null);
+    setModalOpen(true);
   }
 
-  function handleDelete(id) {
-    setData((prev) => prev.filter((d) => d.id !== id));
+  function openEdit(item) {
+    setEditData(item);
+    setModalOpen(true);
   }
 
-  // Klik ikon hapus: simpan dulu item-nya, hapus baru dijalankan setelah dikonfirmasi
-  function requestDelete(id) {
-    setDeleteTarget(data.find((d) => d.id === id) ?? null);
+  function closeForm() {
+    setModalOpen(false);
   }
 
-  function confirmDelete() {
-    if (deleteTarget) handleDelete(deleteTarget.id);
+  function closeDelete() {
     setDeleteTarget(null);
+    setDeleteError("");
+  }
+
+  // Dipanggil NomorNasionalFormModal. Kalau melempar error, modal tetap terbuka dan menampilkannya.
+  async function handleSave(item) {
+    // Ikon baru (kalau ada) diunggah dulu; kalau tidak ada file baru, ikon lama tidak disentuh
+    const iconUrl = item.logoFile ? await uploadNomorIcon(item.logoFile) : null;
+
+    if (item.id) {
+      const lama = data.find((d) => d.id === item.id);
+      const changes = {};
+      if (item.nama !== lama?.nama) changes.agency_name = item.nama;
+      if (item.nomor !== lama?.nomor) changes.telephone = item.nomor;
+      if (iconUrl) changes.icon = iconUrl;
+      if (Object.keys(changes).length > 0) await updateNomorNasional(item.id, changes);
+    } else {
+      await createNomorNasional({
+        agency_name: item.nama,
+        telephone: item.nomor,
+        ...(iconUrl ? { icon: iconUrl } : {}),
+      });
+    }
+
+    await load();
+    setNotice({
+      type: "success",
+      text: item.id ? `Nomor "${item.nama}" diperbarui.` : `Nomor "${item.nama}" ditambahkan.`,
+    });
+  }
+
+  // Hapus permanen (tabel nomor_darurat tidak punya kolom is_active)
+  async function handleConfirmDelete() {
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteNomorNasional(deleteTarget.id);
+      setNotice({ type: "success", text: `Nomor "${deleteTarget.nama}" dihapus.` });
+      closeDelete();
+      await load();
+    } catch (err) {
+      setDeleteError(err.message || "Gagal menghapus nomor");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
@@ -41,7 +127,7 @@ export default function NomorNasionalPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-900">Nomor Nasional</h1>
           <button
-            onClick={() => { setEditData(null); setModalOpen(true); }}
+            onClick={openAdd}
             className="flex items-center gap-2 rounded-md bg-[#1BA3BA] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0]"
           >
             <Plus size={16} /> Tambah Nomor Nasional
@@ -50,46 +136,65 @@ export default function NomorNasionalPage() {
 
         <div className="mb-6 mt-4 h-[3px] rounded bg-gray-300" />
 
-        <NomorNasionalTable
-          data={data}
-          onEdit={(item) => { setEditData(item); setModalOpen(true); }}
-          onDelete={requestDelete}
-        />
+        {notice && (
+          <div
+            className={`mb-4 rounded-md border px-4 py-2.5 text-sm ${
+              notice.type === "success"
+                ? "border-green-200 bg-green-50 text-green-700"
+                : "border-red-200 bg-red-50 text-red-600"
+            }`}
+          >
+            {notice.text}
+          </div>
+        )}
+
+        {loading ? (
+          <p className="py-12 text-center text-sm text-gray-400">Memuat nomor nasional...</p>
+        ) : loadError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center">
+            <p className="text-sm text-red-600">{loadError}</p>
+            <button
+              onClick={() => { setLoading(true); load(); }}
+              className="mt-3 rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-100"
+            >
+              Coba lagi
+            </button>
+          </div>
+        ) : data.length === 0 ? (
+          <EmptyState message="Belum ada nomor nasional" />
+        ) : (
+          <NomorNasionalTable
+            data={data}
+            onEdit={openEdit}
+            onDelete={(id) => setDeleteTarget(data.find((d) => d.id === id) ?? null)}
+          />
+        )}
       </div>
 
       <NomorNasionalFormModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={closeForm}
         onSave={handleSave}
         editData={editData}
       />
 
-      <Modal
+      <ConfirmDialog
         open={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
+        onClose={closeDelete}
+        onConfirm={handleConfirmDelete}
         title="Hapus Nomor Nasional"
+        icon={Trash2}
+        confirmLabel="Hapus"
+        loading={deleting}
+        error={deleteError}
       >
-        <p className="mb-6 text-sm leading-relaxed text-gray-600">
-          Yakin ingin menghapus nomor{" "}
-          <span className="font-semibold text-gray-900">{deleteTarget?.nama}</span>
-          {deleteTarget?.nomor ? ` (${deleteTarget.nomor})` : ""}? Tindakan ini
-          tidak dapat dibatalkan.
+        <p>Yakin ingin menghapus nomor</p>
+        <p className="my-1 text-base font-semibold uppercase tracking-wide text-gray-900">
+          {deleteTarget?.nama}
         </p>
-        <div className="flex justify-end gap-3">
-          <button
-            onClick={() => setDeleteTarget(null)}
-            className="rounded-md border border-gray-300 px-5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-          >
-            Batal
-          </button>
-          <button
-            onClick={confirmDelete}
-            className="rounded-md bg-red-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
-          >
-            Hapus
-          </button>
-        </div>
-      </Modal>
+        {deleteTarget?.nomor && <p className="text-xs text-gray-500">{deleteTarget.nomor}</p>}
+        <p className="mt-3 text-xs text-gray-400">Tindakan ini tidak dapat dibatalkan.</p>
+      </ConfirmDialog>
     </div>
   );
 }
