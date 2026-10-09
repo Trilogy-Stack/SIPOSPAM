@@ -54,7 +54,7 @@ const lngQ = z.coerce.number().min(-180).max(180);
 
 const paging = {
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(10),
+  limit: z.coerce.number().int().min(1).max(1000).default(1000),
 };
 
 const email = z.string().trim().toLowerCase().email("Email tidak valid");
@@ -139,7 +139,7 @@ export const pospamBody = z.object({
 export const pospamUpdateBody = pospamBody.partial();
 
 export const fotoBody = z.object({
-  urutan: z.coerce.number().int().min(1).max(4),
+  urutan: z.coerce.number().int().min(1).max(10),
 });
 
 // Skema dasar nomor darurat sebelum penambahan logika kondisional
