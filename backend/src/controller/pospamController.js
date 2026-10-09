@@ -15,7 +15,12 @@ function pastikanAksesWilayah(reqUser, targetRegion) {
 
 // Daftar pospam (dengan paginasi & pencarian)
 export const listPospam = wrap(async (req, res) => {
-  const { region, q, page = 1, limit = 10 } = req.valid.query;
+  let { region, q, page = 1, limit = 10 } = req.valid.query;
+
+  // Admin wilayah hanya boleh melihat wilayahnya sendiri
+  if (req.user && req.user.role !== "super_admin") {
+    region = req.user.region;
+  }
 
   let query = supabaseAdmin
     .from("pospam")
