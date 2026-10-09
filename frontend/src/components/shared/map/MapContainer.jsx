@@ -1,16 +1,20 @@
 // src/components/shared/map/MapContainer.jsx
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer as LeafletMap, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import RegionOverlay from "./RegionOverlay";
 import PospamMarker from "./PospamMarker";
 import FlyToRegion from "./FlyToRegion";
-import { JATENG_BOUNDS, JATENG_PAN_BOUNDS } from "@/lib/mapConfig";
 import JatengMask from "./JatengMask";
+import { JATENG_BOUNDS, JATENG_PAN_BOUNDS } from "@/lib/mapConfig";
 
 const PADDING = [10, 10];
 const FIT_OPTIONS = { padding: PADDING, animate: false };
+
+// Bentuk detail (garis titik terluar) muncul saat zoom sudah naik sebanyak ini
+// dari tampilan seluruh Jawa Tengah. Makin kecil = detail muncul lebih cepat saat zoom in.
+const DETAIL_ZOOM_OFFSET = 3;
 
 // Menjaga tampilan Jawa Tengah:
 // - batas zoom-out = tepat satu Jawa Tengah di kotak peta (dihitung ulang tiap ukuran berubah)
@@ -34,7 +38,23 @@ function JatengView({ fit }) {
   return null;
 }
 
+// Memberi tahu induk apakah peta sudah cukup di-zoom untuk menampilkan bentuk detail
+function DetailWatcher({ onChange }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const update = () => onChange(map.getZoom() >= map.getMinZoom() + DETAIL_ZOOM_OFFSET);
+    update();
+    map.on("zoomend zoomlevelschange resize", update);
+    return () => map.off("zoomend zoomlevelschange resize", update);
+  }, [map, onChange]);
+
+  return null;
+}
+
 export default function MapContainer({ wilayahList = [], selectedWilayah, onSelectRegion }) {
+  const [detail, setDetail] = useState(false);
+
   return (
     <LeafletMap
       bounds={JATENG_BOUNDS}
@@ -52,21 +72,30 @@ export default function MapContainer({ wilayahList = [], selectedWilayah, onSele
       />
       <JatengMask />
       <JatengView fit={!selectedWilayah} />
-      <RegionOverlay regions={wilayahList} onSelect={onSelectRegion} />
+      <DetailWatcher onChange={setDetail} />
 
-      {/* Semua pospam selalu tampil; yang di luar wilayah terpilih dibuat pudar */}
+      {/* Zoom jauh: lingkaran/lonjong per wilayah. Zoom dekat: garis antar titik pospam terluar */}
+      <RegionOverlay
+        regions={wilayahList}
+        onSelect={onSelectRegion}
+        selectedId={selectedWilayah?.id ?? null}
+        detail={detail}
+      />
+
+      {/* Semua pin pospam tampil normal, termasuk yang di luar wilayah terpilih */}
       {wilayahList.flatMap((w) =>
-        w.pospam.map((p) => (
-          <PospamMarker
-            key={p.id}
-            pospam={p}
-            dimmed={!!selectedWilayah && selectedWilayah.id !== w.id}
-            onClick={() => onSelectRegion(w)}
-          />
-        ))
+        w.pospam
+          .filter((p) => p.valid)
+          .map((p) => (
+            <PospamMarker
+              key={p.id}
+              pospam={p}
+              onClick={() => onSelectRegion(w)}
+            />
+          ))
       )}
 
-      {selectedWilayah && <FlyToRegion bounds={selectedWilayah.bounds} />}
+      {selectedWilayah?.bounds && <FlyToRegion bounds={selectedWilayah.bounds} />}
     </LeafletMap>
   );
 }

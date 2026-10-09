@@ -10,7 +10,11 @@ const menuSuperadmin = [
 export default function SuperadminLayout({ children }) {
   return (
     <div>
-      <Navbar title="SIPOSPAM — Superadmin" items={menuSuperadmin} />
+      <Navbar
+        title="SIPOSPAM — Superadmin"
+        items={menuSuperadmin}
+        badge="Superadmin"
+      />
       <main>{children}</main>
     </div>
   );

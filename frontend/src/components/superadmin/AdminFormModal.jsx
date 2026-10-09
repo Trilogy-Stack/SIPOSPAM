@@ -10,37 +10,68 @@ const inputClass =
 
 export default function AdminFormModal({ open, onClose, onSave, initialData = null }) {
   const isEdit = !!initialData;
-  const [namaWilayah, setNamaWilayah] = useState("");
+  const [name, setName] = useState("");
+  const [region, setRegion] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   // Isi form saat dibuka: data admin kalau edit, kosong kalau tambah baru
   useEffect(() => {
     if (open) {
-      setNamaWilayah(initialData?.wilayah?.nama ?? "");
+      setName(initialData?.name ?? "");
+      setRegion(initialData?.region ?? "");
       setEmail(initialData?.email ?? "");
       setPassword("");
+      setError("");
+      setSaving(false);
     }
   }, [open, initialData]);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    onSave({ nama_wilayah: namaWilayah, email, password });
-    onClose();
+    setSaving(true);
+    setError("");
+    try {
+      await onSave({
+        name: name.trim(),
+        region: region.trim(),
+        email: email.trim(),
+        password,
+      });
+      onClose(); // hanya menutup kalau berhasil
+    } catch (err) {
+      setError(err.message || "Gagal menyimpan data");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? "Edit Akun Admin" : "Tambah Akun Admin"}>
       <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
         <div>
-          <label className={labelClass}>Nama Wilayah</label>
+          <label className={labelClass}>Nama Polres</label>
           <input
             required
-            name="nama-wilayah"
+            name="nama-polres"
             autoComplete="off"
-            value={namaWilayah}
-            onChange={(e) => setNamaWilayah(e.target.value)}
-            placeholder="Mis. POLRES DEMAK"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Mis. Polres Demak"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className={labelClass}>Wilayah</label>
+          <input
+            required
+            name="wilayah"
+            autoComplete="off"
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            placeholder="Mis. Kabupaten Demak"
             className={inputClass}
           />
         </div>
@@ -57,21 +88,35 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
             className={inputClass}
           />
         </div>
-        <div>
-          <label className={labelClass}>Password</label>
-          <PasswordInput
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required={!isEdit}
-            autoComplete="new-password"
-            placeholder={isEdit ? "Kosongkan jika tidak diubah" : "************"}
-          />
-        </div>
+
+        {/* Password hanya saat tambah baru: BE tidak menerima perubahan password lewat edit */}
+        {!isEdit && (
+          <div>
+            <label className={labelClass}>Password</label>
+            <PasswordInput
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              placeholder="************"
+            />
+            <p className="mt-1.5 text-xs text-gray-400">
+              Minimal 8 karakter. Admin diminta menggantinya saat login pertama.
+            </p>
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-center text-xs text-red-600">
+            {error}
+          </div>
+        )}
+
         <button
           type="submit"
-          className="mx-auto mt-3 rounded-md bg-[#0F5BBA] px-10 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0c4a99]"
+          disabled={saving}
+          className="mx-auto mt-3 rounded-md bg-[#0F5BBA] px-10 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0c4a99] disabled:opacity-50"
         >
-          Simpan
+          {saving ? "Menyimpan..." : "Simpan"}
         </button>
       </form>
     </Modal>

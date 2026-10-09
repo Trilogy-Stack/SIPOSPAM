@@ -1,23 +1,23 @@
-import { supabase } from "../config/supabase.js";
+import { supabaseAdmin } from "../config/supabase.js";
 import { wrap } from "../utils/http.js";
 
-// 1. Ambil daftar semua wilayah/region unik dari tabel pospam & profiles
+// Daftar wilayah (region) yang ada di sistem
 export const listWilayah = wrap(async (req, res) => {
-  const { data: pospamData, error: errPospam } = await supabase
-    .from("pospam")
-    .select("region");
+  // Admin wilayah hanya melihat wilayahnya sendiri
+  if (req.user && req.user.role !== "super_admin") {
+    return res.json({ data: req.user.region ? [req.user.region] : [] });
+  }
 
-  if (errPospam) throw errPospam;
+  const { data, error } = await supabaseAdmin.from("pospam").select("region");
+  if (error) throw error;
 
-  // Ambil daftar region unik dan hilangkan nilai null/kosong
-  const wilayahUnik = [...new Set(pospamData.map((item) => item.region).filter(Boolean))].sort();
-
+  const wilayahUnik = [...new Set(data.map((item) => item.region).filter(Boolean))].sort();
   res.json({ data: wilayahUnik });
 });
 
 // 2. Isi dropdown "Cari Daerah" di frontend (diambil dari region pospam)
 export const listDaerah = wrap(async (req, res) => {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("pospam")
     .select("region");
 
@@ -30,13 +30,13 @@ export const listDaerah = wrap(async (req, res) => {
 
 // 3. Rekapitulasi jumlah pospam & nomor darurat per wilayah untuk Dashboard Superadmin
 export const rekapWilayah = wrap(async (req, res) => {
-  const { data: pospamData, error: errPospam } = await supabase
+  const { data: pospamData, error: errPospam } = await supabaseAdmin
     .from("pospam")
     .select("region");
 
   if (errPospam) throw errPospam;
 
-  const { data: nomorData, error: errNomor } = await supabase
+  const { data: nomorData, error: errNomor } = await supabaseAdmin
     .from("nomor_darurat")
     .select("region");
 

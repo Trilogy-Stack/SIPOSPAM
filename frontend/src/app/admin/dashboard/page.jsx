@@ -16,6 +16,9 @@ import {
   Coffee,
   Check,
 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { getRegionScope } from "@/lib/regionScope";
+import PhotoLightbox from "@/components/admin/PhotoLightbox";
 
 const CATEGORIES = ["Bencana", "Medis", "BBM", "Bengkel", "Keamanan"];
 const DEFAULT_FACILITIES = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
@@ -30,28 +33,26 @@ const FACILITY_ICON = {
 // ---------- Normalisasi data backend ----------
 const normalizePospam = (p) => ({
   id: p.id,
-  name: p.name || p.nama_pos || "",
-  coordinator: p.koor_name || p.nama_kordinator || "",
-  phone: p.koor_phone || p.phone || p.no_hp || "",
-  address:
-    p.address ||
-    p.alamat ||
-    [p.street, formatRegion(p.location), p.area].filter(Boolean).join(", "),
-  lat: p.latitude,
-  lng: p.longitude,
-  facilities: p.facility || [],
-  photos: p.photo || [],
+  name: p.name || "",
+  coordinator: p.koor_name || "",
+  phone: p.koor_phone || "",
+  address: [formatRegion(p.location), p.area].filter(Boolean).join(", "),
+  lat: p.latitude ?? null,
+  lng: p.longitude ?? null,
+  facilities: Array.isArray(p.facility) ? p.facility : [],
+  photos: Array.isArray(p.photo) ? p.photo : [],
 });
 
 const normalizeEmergency = (e) => ({
   id: e.id,
-  name: e.name || e.nama_instansi || "",
-  phone: e.phone || e.no_hp || "",
+  name: e.agency_name || "",
+  phone: e.telephone || "",
   address:
     e.address ||
     e.alamat ||
-    [e.street, formatRegion(e.region)].filter(Boolean).join(", "),
+    [e.location, formatRegion(e.region), e.area].filter(Boolean).join(", "),
   category: e.category || "",
+  icon: e.icon || "",
   lat: e.lat ?? e.latitude ?? null,
   lng: e.lng ?? e.longitude ?? null,
 });
@@ -90,9 +91,9 @@ function MapEmbed({ lat, lng }) {
 
 function Row({ label, children }) {
   return (
-    <div className="grid grid-cols-[120px_1fr] gap-1 text-xs text-slate-800">
-      <span className="font-semibold">{label}</span>
-      <span>: {children}</span>
+    <div className="grid grid-cols-[110px_1fr] md:grid-cols-[130px_1fr] gap-1 text-xs md:text-sm">
+      <span className="font-semibold text-slate-800">{label}</span>
+      <span className="text-slate-600 font-medium">: {children}</span>
     </div>
   );
 }
@@ -142,15 +143,15 @@ function PageSize({ value, onChange }) {
 
 function EmptyDetail() {
   return (
-    <div className="h-full min-h-[250px] flex flex-col items-center justify-center text-center gap-1">
-      <p className="text-xs font-semibold text-slate-600">Tidak ada Detail Informasi Pengadu</p>
+    <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center gap-1">
+      <p className="text-xs md:text-sm font-semibold text-slate-600">Tidak ada Detail Informasi Pengadu</p>
       <p className="text-xs text-slate-400">Pilih salah satu data pengaduan dari daftar</p>
     </div>
   );
 }
-
 // ---------- Halaman ----------
 export default function AdminDashboardPage() {
+  const { profile } = useAuth();
   const [pospamList, setPospamList] = useState([]);
   const [emergencyList, setEmergencyList] = useState([]);
   const [loadingPospam, setLoadingPospam] = useState(true);
@@ -161,7 +162,7 @@ export default function AdminDashboardPage() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [pageSizePospam, setPageSizePospam] = useState("10");
   const [pageSizeEmergency, setPageSizeEmergency] = useState("10");
-  const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null);
 
   const todayFormatted = new Date().toLocaleDateString("id-ID", {
     weekday: "long",
@@ -171,32 +172,44 @@ export default function AdminDashboardPage() {
   });
 
   useEffect(() => {
-    fetchData();
-  }, []);
+  fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [profile?.role, profile?.region]);
 
-  async function fetchData() {
-    try {
-      const data = await getPospamsApi();
-      const arr = Array.isArray(data) ? data : data.data || [];
-      setPospamList(arr.map(normalizePospam));
-    } catch (error) {
-      console.error("Error fetching pospam:", error);
-      setPospamList([]);
-    } finally {
-      setLoadingPospam(false);
-    }
+async function fetchData() {
+  const scope = getRegionScope(profile);
+  if (!scope.ready) return;
 
-    try {
-      const data = await getEmergencyApi();
-      const arr = Array.isArray(data) ? data : data.data || [];
-      setEmergencyList(arr.map(normalizeEmergency));
-    } catch (error) {
-      console.error("Error fetching emergency:", error);
-      setEmergencyList([]);
-    } finally {
-      setLoadingEmergency(false);
-    }
+  if (scope.blocked) {
+    setPospamList([]);
+    setEmergencyList([]);
+    setLoadingPospam(false);
+    setLoadingEmergency(false);
+    return;
   }
+
+  try {
+    const data = await getPospamsApi(scope.params);
+    const arr = Array.isArray(data) ? data : data.data || [];
+    setPospamList(arr.map(normalizePospam));
+  } catch (error) {
+    console.error("Error fetching pospam:", error);
+    setPospamList([]);
+  } finally {
+    setLoadingPospam(false);
+  }
+
+  try {
+    const data = await getEmergencyApi(scope.params);
+    const arr = Array.isArray(data) ? data : data.data || [];
+    setEmergencyList(arr.map(normalizeEmergency));
+  } catch (error) {
+    console.error("Error fetching emergency:", error);
+    setEmergencyList([]);
+  } finally {
+    setLoadingEmergency(false);
+  }
+}
 
   const filteredEmergency = emergencyList.filter((item) =>
     activeCategory ? item.category?.toLowerCase() === activeCategory.toLowerCase() : true
@@ -209,7 +222,6 @@ export default function AdminDashboardPage() {
     ? selectedPospam.facilities.filter((f) => DEFAULT_FACILITIES.includes(f))
     : [];
   const photos = selectedPospam?.photos || [];
-  const visiblePhotos = showAllPhotos ? photos : photos.slice(0, 4);
 
   const cardClass = "bg-white rounded-xl shadow-sm p-5 border border-slate-100";
 
@@ -222,8 +234,8 @@ export default function AdminDashboardPage() {
       <Image 
         src="/icons_location.png" 
         alt="location icon" 
-        width={70} 
-        height={70} 
+        width={68} 
+        height={68} 
         className="shrink-0"
       />
     
@@ -283,7 +295,6 @@ export default function AdminDashboardPage() {
                       selected={selectedPospam?.id === item.id}
                       onClick={() => {
                         setSelectedPospam(item);
-                        setShowAllPhotos(false);
                       }}
                     />
                   ))}
@@ -298,15 +309,13 @@ export default function AdminDashboardPage() {
           {/* Detail Pospam */}
           <div className={cardClass}>
             {selectedPospam ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <h2 className="text-sm md:text-base font-bold text-slate-800">
                   Detail Lokasi {selectedPospam.name}
                 </h2>
                 <MapEmbed lat={selectedPospam.lat} lng={selectedPospam.lng} />
 
-                <h3 className="text-xs md:text-sm font-bold text-slate-900 pt-2">
-                  Detail Informasi Pengadu
-                </h3>
+                <h3 className="text-sm md:text-base font-bold text-slate-900 pt-1">Detail Informasi Pengadu</h3>
                 <div className="space-y-1.5">
                   <Row label="Nama Kordinator">{selectedPospam.coordinator || "-"}</Row>
                   <Row label="Alamat">{selectedPospam.address || "-"}</Row>
@@ -316,12 +325,12 @@ export default function AdminDashboardPage() {
                 </div>
 
                 {defaultFacilities.length > 0 && (
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs text-slate-800">
+                  <div className="grid grid-flow-col grid-rows-3 auto-cols-fr gap-x-6 gap-y-2.5 text-xs md:text-sm text-slate-600 font-medium">
                     {defaultFacilities.map((f) => {
                       const Icon = FACILITY_ICON[f] || Check;
                       return (
                         <span key={f} className="flex items-center gap-2">
-                          <Icon className="w-4 h-4 shrink-0 text-slate-600" />
+                          <Icon className="w-4 h-4 shrink-0" />
                           {f}
                         </span>
                       );
@@ -331,8 +340,8 @@ export default function AdminDashboardPage() {
 
                 {otherFacilities.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-slate-800 mb-1">Fasilitas Lainnya:</p>
-                    <ol className="grid grid-flow-col grid-rows-3 gap-x-6 text-xs text-slate-800 list-none">
+                    <p className="text-xs md:text-sm font-semibold text-slate-800 mb-1.5">Fasilitas Lainnya:</p>
+                    <ol className="grid grid-flow-col grid-rows-3 gap-x-6 gap-y-1 text-xs md:text-sm text-slate-600 font-medium list-none">
                       {otherFacilities.map((f, i) => (
                         <li key={f}>
                           {i + 1}. {f}
@@ -343,27 +352,41 @@ export default function AdminDashboardPage() {
                 )}
 
                 {photos.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2 pt-2">
-                    {visiblePhotos.map((url, i) => {
-                      const isLast = !showAllPhotos && i === 3 && photos.length > 4;
+                  <div className="grid grid-cols-4 gap-2 pt-1">
+                    {photos.slice(0, 4).map((url, i) => {
+                      const extra = photos.length - 4;
+                      const showMore = i === 3 && extra > 0;
                       return (
-                        <div key={url + i} className="relative h-16 rounded-lg overflow-hidden border border-slate-200">
+                        <button
+                          key={url + i}
+                          type="button"
+                          onClick={() => setLightboxIndex(i)}
+                          title="Klik untuk melihat foto"
+                          className="group relative aspect-square rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-[#1a9fb8]"
+                        >
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={url} alt="" className="w-full h-full object-cover" />
-                          {isLast && (
-                            <button
-                              type="button"
-                              onClick={() => setShowAllPhotos(true)}
-                              className="absolute inset-0 bg-black/60 text-white text-[10px] font-semibold flex items-center justify-center text-center p-1"
-                            >
-                              Lihat Lainnya
-                            </button>
+                          <img
+                            src={url}
+                            alt={`Foto fasilitas ${i + 1}`}
+                            className="w-full h-full object-cover transition group-hover:scale-105"
+                          />
+                          {showMore && (
+                            <span className="absolute inset-0 bg-black/55 text-white text-sm md:text-base font-semibold flex items-center justify-center">
+                              +{extra}
+                            </span>
                           )}
-                        </div>
+                        </button>
                       );
                     })}
                   </div>
                 )}
+
+                <PhotoLightbox
+                  photos={photos}
+                  index={lightboxIndex}
+                  onClose={() => setLightboxIndex(null)}
+                  onChange={setLightboxIndex}
+                />
               </div>
             ) : (
               <EmptyDetail />
@@ -427,25 +450,23 @@ export default function AdminDashboardPage() {
           {/* Detail Nomor Darurat */}
           <div className={cardClass}>
             {selectedEmergency ? (
-              <div className="space-y-4">
-                <h2 className="text-sm md:text-base font-bold text-slate-800">
+              <div className="space-y-3">
+                 <h2 className="text-sm md:text-base font-bold text-slate-800">
                   Detail Lokasi {selectedEmergency.name}
                 </h2>
                 <MapEmbed lat={selectedEmergency.lat} lng={selectedEmergency.lng} />
 
-                <h3 className="text-xs md:text-sm font-bold text-slate-900 pt-2">
-                  Detail Instansi
-                </h3>
+                <h3 className="text-sm md:text-base font-bold text-slate-900 pt-1">Detail Instansi</h3>
                 <div className="space-y-2">
                   <Row label="Nama Instansi">{selectedEmergency.name || "-"}</Row>
                   <Row label="Alamat">{selectedEmergency.address || "-"}</Row>
                   <Row label="Nomor">{selectedEmergency.phone || "-"}</Row>
-                  <div className="grid grid-cols-[120px_1fr] gap-1 text-xs text-slate-800 items-center">
-                    <span className="font-semibold">Kategori</span>
-                    <span>
+                   <div className="grid grid-cols-[110px_1fr] md:grid-cols-[130px_1fr] gap-1 text-xs md:text-sm items-center">
+                      <span className="font-semibold text-slate-800">Kategori</span>
+                      <span className="text-slate-600 font-medium">
                       :{" "}
                       {selectedEmergency.category ? (
-                        <span className="inline-block bg-slate-200 text-slate-700 font-medium rounded-full px-4 py-0.5 ml-1 text-xs">
+                        <span className="inline-block bg-slate-200 text-slate-700 rounded-full px-5 py-1 ml-1">
                           {selectedEmergency.category}
                         </span>
                       ) : (

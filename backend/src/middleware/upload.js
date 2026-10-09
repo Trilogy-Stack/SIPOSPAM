@@ -33,7 +33,7 @@ export function deteksiTipeGambar(buf) {
     buf.subarray(0, 4).toString("ascii") === "RIFF" &&
     buf.subarray(8, 12).toString("ascii") === "WEBP"
   ) {
-    return { mime: "image/webp", ext: "webp" };
+    return { mime: "image/weacbp", ext: "webp" };
   }
   return null;
 }

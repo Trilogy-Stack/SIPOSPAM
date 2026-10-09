@@ -7,7 +7,9 @@ export default function PospamCardItem({ nomor, pospam }) {
       </div>
       <div className="flex-1 px-5 py-3">
         <p className="text-base font-semibold text-gray-900">{pospam.nama}</p>
-        <p className="text-xs text-gray-500">{pospam.lokasi}</p>
+        <p className="text-xs text-gray-500">
+          {[pospam.lokasi, pospam.area].filter(Boolean).join(", ")}
+        </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {pospam.fasilitas.map((f) => (
             <span

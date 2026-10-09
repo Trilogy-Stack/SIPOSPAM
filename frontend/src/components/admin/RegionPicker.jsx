@@ -2,81 +2,78 @@
 
 import { useState, useMemo } from "react";
 import { ChevronDown } from "lucide-react";
+import rawWilayah from "@/data/kabupaten_kota_kecamatan.json";
 
 const PROVINCE = "Jawa Tengah";
 
-// TODO BACKEND: ganti data contoh ini dengan data wilayah dari API
-// (kab/kota → kecamatan → kode pos). Kode pos di bawah hanya contoh.
-const REGION_DATA = {
-  "Kota Salatiga": {
-    Sidorejo: ["50711"],
-    Argomulyo: ["50734"],
-    Tingkir: ["50742"],
-    Sidomukti: ["50721"],
-  },
-  "Kab. Semarang": {
-    "Ungaran Barat": ["50517"],
-    "Ungaran Timur": ["50519"],
-  },
-  "Kab. Demak": {
-    Demak: ["59511"],
-  },
-  "Kab. Boyolali": {
-    Boyolali: ["57311"],
-  },
-};
+// "KABUPATEN CILACAP" → "Kab. Cilacap", "KOTA SALATIGA" → "Kota Salatiga"
+const titleCase = (s) => s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
+const formatCity = (s) => titleCase(s).replace(/^Kabupaten /, "Kab. ");
 
-export const EMPTY_REGION = { province: PROVINCE, city: "", district: "", postalCode: "" };
+// Disiapkan sekali saat file dimuat: nama dirapikan, duplikat dibuang, diurutkan
+const WILAYAH = Object.entries(rawWilayah)
+  .map(([city, districts]) => ({
+    city: formatCity(city),
+    districts: [...new Set(districts.map(titleCase))].sort((a, b) =>
+      a.localeCompare(b, "id")
+    ),
+  }))
+  .sort((a, b) => a.city.localeCompare(b.city, "id"));
 
-// Teks yang ditampilkan: "Sidorejo, Kota Salatiga, 50711"
+export const EMPTY_REGION = { province: PROVINCE, city: "", district: "" };
+
+// Teks yang ditampilkan dan dikirim ke backend: "Sidorejo, Kota Salatiga"
 export const formatRegion = (r) => {
   if (!r) return "";
   if (typeof r === "string") return r;
-  return r.postalCode ? `${r.district}, ${r.city}, ${r.postalCode}` : "";
+  return r.district ? `${r.district}, ${r.city}` : "";
+};
+
+// Kata kunci pencarian peta dari wilayah yang dipilih
+export const regionToQueries = (r) => {
+  if (!r || typeof r === "string" || !r.district) return { main: "", fallback: "" };
+  const city = r.city.replace(/^Kab\. /, "Kabupaten ");
+  return {
+    main: `Kecamatan ${r.district}, ${city}, Jawa Tengah, Indonesia`,
+    fallback: `${city}, Jawa Tengah, Indonesia`,
+  };
 };
 
 const TABS = [
   { key: "city", label: "Kabupaten/Kota", placeholder: "Cari kabupaten/kota" },
   { key: "district", label: "Kecamatan", placeholder: "Cari kecamatan" },
-  { key: "postalCode", label: "Kode Pos", placeholder: "Cari kode pos" },
 ];
 
-export default function RegionPicker({ value, onChange }) {
+export default function RegionPicker({ value, onChange, required = true }) {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState("city");
   const [search, setSearch] = useState("");
   const [draft, setDraft] = useState(EMPTY_REGION);
 
   const openPicker = () => {
-    setDraft(value?.postalCode ? value : EMPTY_REGION);
+    setDraft(value?.district ? value : EMPTY_REGION);
     setTab("city");
     setSearch("");
     setOpen(true);
   };
 
   const options = useMemo(() => {
-    let list = [];
-    if (tab === "city") list = Object.keys(REGION_DATA);
-    else if (tab === "district") list = Object.keys(REGION_DATA[draft.city] || {});
-    else list = REGION_DATA[draft.city]?.[draft.district] || [];
+    const list =
+      tab === "city"
+        ? WILAYAH.map((w) => w.city)
+        : WILAYAH.find((w) => w.city === draft.city)?.districts || [];
     return list.filter((o) => o.toLowerCase().includes(search.toLowerCase()));
-  }, [tab, draft, search]);
+  }, [tab, draft.city, search]);
 
-  const canOpenTab = (key) =>
-    key === "city" ||
-    (key === "district" && draft.city) ||
-    (key === "postalCode" && draft.district);
+  const canOpenTab = (key) => key === "city" || (key === "district" && draft.city);
 
   const pick = (opt) => {
     setSearch("");
     if (tab === "city") {
       setDraft({ ...EMPTY_REGION, city: opt });
       setTab("district");
-    } else if (tab === "district") {
-      setDraft((d) => ({ ...d, district: opt, postalCode: "" }));
-      setTab("postalCode");
     } else {
-      onChange({ ...draft, postalCode: opt });
+      onChange({ ...draft, district: opt }); // kecamatan dipilih → selesai
       setOpen(false);
     }
   };
@@ -89,18 +86,18 @@ export default function RegionPicker({ value, onChange }) {
       <button
         type="button"
         onClick={openPicker}
-        className="w-full border border-slate-200 rounded-md px-3 py-2 text-[11px] text-left flex items-center justify-between focus:outline-none focus:border-[#1a9fb8]"
+        className="w-full border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-left flex items-center justify-between focus:outline-none focus:border-[#1a9fb8]"
       >
         <span className={text ? "text-slate-700" : "text-slate-400"}>
-          {text || "Pilih kabupaten/kota, kecamatan, kode pos"}
+          {text || "Pilih kabupaten/kota, kecamatan"}
         </span>
-        <ChevronDown className="w-3 h-3 text-slate-500" />
+        <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
       </button>
 
       {/* Agar validasi "required" pada form tetap jalan */}
       <input
         tabIndex={-1}
-        required
+        required={required}
         value={text}
         onChange={() => {}}
         className="absolute left-0 bottom-0 w-full h-0 opacity-0 pointer-events-none"
@@ -121,7 +118,7 @@ export default function RegionPicker({ value, onChange }) {
                     setTab(t.key);
                     setSearch("");
                   }}
-                  className={`text-[11px] ${
+                  className={`text-xs md:text-sm ${
                     tab === t.key
                       ? "font-semibold text-slate-900"
                       : "text-slate-300 disabled:cursor-not-allowed"
@@ -138,20 +135,20 @@ export default function RegionPicker({ value, onChange }) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={activeTab.placeholder}
-              className="w-full mt-3 border border-slate-200 rounded-md px-3 py-2 text-[11px] text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]"
+              className="w-full mt-3 border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]"
             />
 
             {/* Daftar */}
             <div className="mt-3 border-t border-slate-200 pt-2 max-h-40 overflow-y-auto">
               {options.length === 0 ? (
-                <p className="text-[11px] text-slate-400 py-2">Data tidak ditemukan.</p>
+                <p className="text-xs md:text-sm text-slate-400 py-2">Data tidak ditemukan.</p>
               ) : (
                 options.map((opt) => (
                   <button
                     key={opt}
                     type="button"
                     onClick={() => pick(opt)}
-                    className="block w-full text-left text-[11px] text-slate-800 py-1.5 px-1 hover:bg-slate-50 rounded"
+                    className="block w-full text-left text-xs md:text-sm text-slate-800 py-1.5 px-1 hover:bg-slate-50 rounded"
                   >
                     {opt}
                   </button>

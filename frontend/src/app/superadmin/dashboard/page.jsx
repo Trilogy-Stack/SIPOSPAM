@@ -1,44 +1,97 @@
 // src/app/superadmin/dashboard/page.jsx
 "use client";
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import SearchBar from "@/components/superadmin/SearchBar";
 import StatusIndicator from "@/components/superadmin/StatusIndicator";
 import WilayahAccordion from "@/components/superadmin/WilayahAccordion";
 import PospamCardList from "@/components/superadmin/PospamCardList";
+import EmptyState from "@/components/superadmin/EmptyState";
+import { getPospamAll, getAdminList } from "@/lib/api";
+import { buildWilayahList } from "@/lib/wilayahData";
 import { mockWilayahList } from "@/mocks/wilayah";
 
 const MapContainer = dynamic(() => import("@/components/shared/map/MapContainer"), { ssr: false });
 
-const wilayahOptions = mockWilayahList.map((w) => w.nama);
+// true = pakai data dummy (src/mocks/wilayah.js) untuk menguji tampilan poligon tanpa data BE
+const USE_MOCK = false;
+
 const norm = (s) => s.trim().toLowerCase();
+const countPospam = (list) => list.reduce((n, w) => n + w.pospam.length, 0);
 
-export default function SuperadminDashboard() {
-  const [search, setSearch] = useState("");
-  const [selectedWilayah, setSelectedWilayah] = useState(null);
-
-  const filtered = mockWilayahList.filter((w) =>
-    w.nama.toLowerCase().includes(search.toLowerCase())
+// Ubah data dummy ke bentuk baris BE, supaya melewati proses yang sama dengan data asli
+const mockRows = () =>
+  mockWilayahList.flatMap((w) =>
+    w.pospam.map((p) => ({
+      id: p.id,
+      name: p.nama,
+      region: w.nama,
+      location: p.lokasi,
+      facility: p.fasilitas,
+      koor_phone: p.telepon,
+      latitude: p.lat,
+      longitude: p.lng,
+    }))
   );
 
-  // Jumlah pospam: total semua wilayah, dan yang sedang ditampilkan
-const countPospam = (list) => list.reduce((n, w) => n + w.pospam.length, 0);
-const totalPospam = countPospam(mockWilayahList);
-const currentPospam = countPospam(selectedWilayah ? [selectedWilayah] : filtered);
+export default function SuperadminDashboard() {
+  const [wilayahList, setWilayahList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoadError("");
+    try {
+      if (USE_MOCK) {
+        setWilayahList(buildWilayahList(mockRows(), []));
+      } else {
+        // Nama polres diambil dari akun admin; kalau gagal, dipakai teks region saja
+        const [rows, admins] = await Promise.all([
+          getPospamAll(),
+          getAdminList().catch(() => []),
+        ]);
+        setWilayahList(buildWilayahList(rows, admins));
+      }
+    } catch (err) {
+      setLoadError(err.message || "Gagal memuat data pospam");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const wilayahOptions = useMemo(() => wilayahList.map((w) => w.nama), [wilayahList]);
+  const selectedWilayah = wilayahList.find((w) => w.id === selectedId) ?? null;
+
+  const q = search.toLowerCase();
+  const filtered = wilayahList.filter(
+    (w) => w.nama.toLowerCase().includes(q) || w.region.toLowerCase().includes(q)
+  );
+
+  // Jumlah pospam: yang sedang ditampilkan dari total semua wilayah
+  const totalPospam = countPospam(wilayahList);
+  const currentPospam = countPospam(selectedWilayah ? [selectedWilayah] : filtered);
+  const invalidCount = wilayahList.reduce(
+    (n, w) => n + w.pospam.filter((p) => !p.valid).length,
+    0
+  );
 
   // Dari search bar (dipilih di dropdown atau diketik lengkap):
-  // isi pencarian, dan kalau namanya persis sama dengan satu wilayah,
-  // pilih wilayah itu supaya peta terbang ke sana dan daftar pospam tampil.
-  // Kalau teks diubah/dikosongkan, pilihan dilepas dan kembali ke tampilan semua wilayah.
+  // isi pencarian, dan kalau namanya persis sama dengan satu wilayah, pilih wilayah itu
   const handleSearchChange = (value) => {
     setSearch(value);
-    const match = mockWilayahList.find((w) => norm(w.nama) === norm(value));
-    setSelectedWilayah(match ?? null);
+    const match = wilayahList.find((w) => norm(w.nama) === norm(value));
+    setSelectedId(match?.id ?? null);
   };
 
-  // Dari klik area wilayah di peta: samakan juga isi search bar
+  // Dari klik poligon/pin di peta: samakan juga isi search bar
   const handleSelectRegion = (wilayah) => {
-    setSelectedWilayah(wilayah);
+    setSelectedId(wilayah?.id ?? null);
     setSearch(wilayah ? wilayah.nama : "");
   };
 
@@ -46,24 +99,43 @@ const currentPospam = countPospam(selectedWilayah ? [selectedWilayah] : filtered
     <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 rounded-xl bg-white px-12 pb-10 pt-6 shadow-sm">
         <div className="flex items-center justify-between gap-4">
-          <SearchBar
-            value={search}
-            onChange={handleSearchChange}
-            options={wilayahOptions}
-          />
+          <SearchBar value={search} onChange={handleSearchChange} options={wilayahOptions} />
           <StatusIndicator current={currentPospam} total={totalPospam} />
         </div>
 
+        {loadError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-center">
+            <p className="text-sm text-red-600">{loadError}</p>
+            <button
+              onClick={() => { setLoading(true); load(); }}
+              className="mt-3 rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-100"
+            >
+              Coba lagi
+            </button>
+          </div>
+        )}
+
         <div className="h-[calc(100vh-260px)] min-h-[480px] overflow-hidden rounded-xl">
           <MapContainer
-            wilayahList={mockWilayahList}
+            wilayahList={wilayahList}
             selectedWilayah={selectedWilayah}
             onSelectRegion={handleSelectRegion}
           />
         </div>
 
+        {invalidCount > 0 && (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            {invalidCount} pospam tidak tampil di peta karena koordinatnya berada di luar Jawa
+            Tengah. Periksa data latitude/longitude pospam tersebut.
+          </p>
+        )}
+
         <div className="mt-4">
-          {selectedWilayah ? (
+          {loading ? (
+            <p className="py-8 text-center text-sm text-gray-400">Memuat data pospam...</p>
+          ) : wilayahList.length === 0 && !loadError ? (
+            <EmptyState message="Belum ada data pospam" />
+          ) : selectedWilayah ? (
             <PospamCardList wilayah={selectedWilayah} />
           ) : (
             <WilayahAccordion wilayahList={filtered} />

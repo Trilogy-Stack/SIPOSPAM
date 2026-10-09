@@ -13,18 +13,36 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
   const [nomor, setNomor] = useState("");
   const [logoUrl, setLogoUrl] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setNama(editData?.nama || "");
     setNomor(editData?.nomor || "");
     setLogoUrl(editData?.logoUrl || null);
     setLogoFile(null);
+    setError("");
+    setSaving(false);
   }, [editData, open]);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
-    onSave({ id: editData?.id, nama, nomor, logoUrl, logoFile });
-    onClose();
+    setSaving(true);
+    setError("");
+    try {
+      await onSave({
+        id: editData?.id,
+        nama: nama.trim(),
+        nomor: nomor.trim(),
+        logoUrl,
+        logoFile,
+      });
+      onClose(); // hanya menutup kalau berhasil
+    } catch (err) {
+      setError(err.message || "Gagal menyimpan data");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -36,11 +54,14 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
             value={logoUrl}
             onChange={(file, previewUrl) => { setLogoFile(file); setLogoUrl(previewUrl); }}
           />
+          <p className="mt-1.5 text-xs text-gray-400">JPG, PNG, atau WebP, maksimal 3 MB.</p>
         </div>
         <div>
           <label className={labelClass}>Nama Instansi</label>
           <input
             required
+            maxLength={150}
+            autoComplete="off"
             value={nama}
             onChange={(e) => setNama(e.target.value)}
             placeholder="Mis. Layanan Polisi"
@@ -51,17 +72,31 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
           <label className={labelClass}>Nomor</label>
           <input
             required
+            maxLength={25}
+            inputMode="tel"
+            autoComplete="off"
             value={nomor}
             onChange={(e) => setNomor(e.target.value)}
             placeholder="Mis. 110"
             className={inputClass}
           />
+          <p className="mt-1.5 text-xs text-gray-400">
+            Hanya angka, +, -, spasi, dan tanda kurung.
+          </p>
         </div>
+
+        {error && (
+          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-center text-xs text-red-600">
+            {error}
+          </div>
+        )}
+
         <button
           type="submit"
-          className="mx-auto mt-3 rounded-md bg-[#0F5BBA] px-10 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0c4a99]"
+          disabled={saving}
+          className="mx-auto mt-3 rounded-md bg-[#0F5BBA] px-10 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0c4a99] disabled:opacity-50"
         >
-          Simpan
+          {saving ? "Menyimpan..." : "Simpan"}
         </button>
       </form>
     </Modal>
