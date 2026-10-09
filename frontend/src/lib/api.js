@@ -70,7 +70,7 @@ export const getWilayahList = () => request("/api/wilayah", { requireAuth: false
 // --- Nomor Nasional = tabel nomor_darurat dengan region "NASIONAL" ---
 export const NASIONAL = "NASIONAL";
 
-// GET publik; limit maksimal di BE = 100
+// GET publik; limit maksimal di BE = 1000
 export const getNomorNasionalAll = () =>
   request(`/api/nomor-darurat?region=${NASIONAL}&limit=100`, { requireAuth: false });
 export const getNomorNasionalPublic = getNomorNasionalAll; // alias lama, jaga-jaga masih dipakai
@@ -86,11 +86,11 @@ export const deleteNomorNasional = (id) =>
   request(`/api/nomor-darurat/${id}`, { method: "DELETE" });
 
 // ======================================================================
-// --- POSPAM (dari BE, tidak diubah) ---
+// --- POSPAM (dari BE) ---
 // ======================================================================
 export const getPospamsApi = (params = {}) => {
   const qs = new URLSearchParams(params).toString();
-  return request(`/api/pospam${qs ? `?${qs}` : ""}`);
+  return request(`/api/pospam${qs ? `?${qs}` : ""}`, { requireAuth: false }); // GET publik
 };
 export const createPospam = (data) =>
   request("/api/pospam", { method: "POST", body: JSON.stringify(data) });
@@ -106,8 +106,7 @@ export const uploadFotoPospam = async (file) => {
   return res.url;
 };
 
-// Tambahan dari saya (terpisah dari blok teman): ambil semua pospam bertahap
-// karena BE membatasi per halaman.
+// Ambil semua pospam secara bertahap (GET publik)
 export async function getPospamAll() {
   const limit = 100;
   const all = [];
@@ -122,11 +121,11 @@ export async function getPospamAll() {
 }
 
 // ======================================================================
-// --- Nomor Darurat / Emergency (dari BE, tidak diubah) ---
+// --- Nomor Darurat / Emergency ---
 // ======================================================================
 export const getEmergencyApi = (params = {}) => {
   const qs = new URLSearchParams(params).toString();
-  return request(`/api/nomor-darurat${qs ? `?${qs}` : ""}`);
+  return request(`/api/nomor-darurat${qs ? `?${qs}` : ""}`, { requireAuth: false }); // GET publik
 };
 export const createEmergency = (data) =>
   request("/api/nomor-darurat", { method: "POST", body: JSON.stringify(data) });
