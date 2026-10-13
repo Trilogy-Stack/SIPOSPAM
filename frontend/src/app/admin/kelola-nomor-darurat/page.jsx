@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   Plus,
-  Flame,
-  HeartPulse,
-  Shield,
+  Siren,
   Fuel,
   Wrench,
   Phone,
+  Hospital,
+  PhoneCall,
+  ShieldAlert,
 } from "lucide-react";
 
 import {
@@ -34,12 +35,12 @@ import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
 const CATEGORIES = ["Bencana", "Medis", "Keamanan", "BBM", "Bengkel", "Lainnya"];
 
 const CATEGORY_ICON = {
-  Bencana: Flame,
-  Medis: HeartPulse,
-  Keamanan: Shield,
+  Bencana: ShieldAlert,
+  Medis: Hospital,
+  Keamanan: Siren,
   BBM: Fuel,
   Bengkel: Wrench,
-  Lainnya: Phone,
+  Lainnya: PhoneCall
 };
 
 const toDbCategory = (cat) => (cat ? cat.toLowerCase() : "");
