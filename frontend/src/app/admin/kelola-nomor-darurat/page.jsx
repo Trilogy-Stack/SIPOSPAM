@@ -23,11 +23,13 @@ import RegionPicker, {
   EMPTY_REGION,
   formatRegion,
   regionToQueries,
+  parseRegion
 } from "@/components/admin/RegionPicker";
 import MapPicker from "@/components/admin/MapPicker";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { getRegionScope } from "@/lib/regionScope";
+import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
 
 const CATEGORIES = ["Bencana", "Medis", "Keamanan", "BBM", "Bengkel", "Lainnya"];
 
@@ -63,11 +65,13 @@ export default function KelolaNomorDaruratPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [currentArea, setCurrentArea] = useState("");
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { toasts, toast, dismiss } = useToast();
 
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  // Kata kunci untuk memindahkan peta ke kecamatan yang dipilih
-  const focus = regionToQueries(form.region);
+  const [pickedRegion, setPickedRegion] = useState(null);
+  const focus = regionToQueries(pickedRegion);
 
 const { profile } = useAuth();
 
@@ -111,13 +115,14 @@ const fetchList = async () => {
     setCurrentArea("");
     setSelectedId(null);
     setMode("add");
+    setPickedRegion(null);
   };
 
   const openEdit = (item) => {
     setForm({
       name: item.agency_name || "",
       phone: item.telephone || "",
-      region: EMPTY_REGION, // picker dikosongkan, alamat lama tampil sebagai teks
+      region: parseRegion(item.area), // terisi dari wilayah yang tersimpan
       street: item.location || "",
       category: toUiCategory(item.category),
       lat: item.latitude ?? null,
@@ -126,22 +131,31 @@ const fetchList = async () => {
     setCurrentArea(item.area || item.region || "");
     setSelectedId(item.id);
     setMode("edit");
+    setPickedRegion(null);
   };
 
   // ---------- Simpan & Hapus ----------
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (saving) return;
+
     if (!form.category) {
-      alert("Pilih salah satu kategori.");
+      toast.warning("Pilih salah satu kategori.");
+      return;
+    }
+
+    if (form.phone.length < 10) {
+      toast.warning("Nomor minimal 10 angka.");
       return;
     }
 
     if (form.lat == null || form.lng == null) {
-      alert("Tentukan lokasi pada peta (klik peta atau geser pin).");
+      toast.warning("Tentukan lokasi pada peta (klik peta atau geser pin).");
       return;
     }
 
+    setSaving(true);
     try {
       const areaStr = formatRegion(form.region); // kosong jika belum dipilih
 
@@ -165,25 +179,35 @@ const fetchList = async () => {
         await updateEmergency(selectedId, payload); // region sengaja tidak dikirim
       }
 
+      const wasAdd = mode === "add";
       await fetchList();
       setMode(null);
       setSelectedId(null);
+      toast.success(
+        wasAdd ? "Nomor darurat berhasil ditambahkan." : "Nomor darurat berhasil diperbarui."
+      );
     } catch (error) {
       console.error("Gagal menyimpan nomor darurat:", error);
-      alert(`Gagal menyimpan: ${error.message}`);
+      toast.error(`Gagal menyimpan: ${error.message}`);
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async () => {
     if (!selectedId) return;
+    setSaving(true);
     try {
       await deleteEmergency(selectedId);
       await fetchList();
       setMode(null);
       setSelectedId(null);
+      toast.success("Nomor darurat berhasil dihapus.");
     } catch (error) {
       console.error("Gagal menghapus nomor darurat:", error);
-      alert(`Gagal menghapus: ${error.message}`);
+      toast.error(`Gagal menghapus: ${error.message}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -216,9 +240,9 @@ const fetchList = async () => {
           </div>
           <button
             onClick={openAdd}
-            className="bg-[#1a9fb8] hover:bg-[#158aa0] transition text-white text-xs font-bold px-4 py-2 rounded-md flex items-center gap-1.5 shadow-sm"
+            className="bg-[#1a9fb8] hover:bg-[#158aa0] transition text-white text-sm font-bold h-10 px-5 rounded flex items-center gap-2 shadow-sm"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
             Tambah Nomor
           </button>
         </div>
@@ -298,25 +322,37 @@ const fetchList = async () => {
                 <label className={labelClass}>Nomor</label>
                 <input
                   className={inputClass}
+                  inputMode="numeric"
+                  maxLength={15}
+                  pattern="[0-9]{10,15}"
+                  title="Nomor harus 10 sampai 15 angka"
                   placeholder="085234817293"
                   value={form.phone}
-                  onChange={setField("phone")}
+                  onChange={(e) =>
+                    setForm((f) => ({
+                      ...f,
+                      phone: e.target.value.replace(/\D/g, "").slice(0, 15),
+                    }))
+                  }
                   required
                 />
               </div>
 
               <div>
-                <label className={labelClass}>Provinsi, Kabupaten/Kota, Kecamatan</label>
-                <RegionPicker
-                  required={mode === "add" || !currentArea}
-                  value={form.region}
-                  onChange={(region) => setForm((f) => ({ ...f, region }))}
-                />
-                {mode === "edit" && currentArea && (
-                  <p className="text-xs md:text-sm text-slate-600 mt-1.5">
-                    Tersimpan: {currentArea} (pilih ulang hanya jika ingin mengubah)
-                  </p>
-                )}
+                <label className={labelClass}>Kabupaten/Kota, Kecamatan</label>
+                  <RegionPicker
+                    required={mode === "add" || !currentArea}
+                    value={form.region}
+                    onChange={(region) => {
+                      setForm((f) => ({ ...f, region }));
+                      setPickedRegion(region);
+                    }}
+                  />
+                  {mode === "edit" && currentArea && !formatRegion(form.region) && (
+                    <p className="text-xs md:text-sm text-slate-600 mt-1.5">
+                      Tersimpan: {currentArea} (pilih ulang hanya jika ingin mengubah)
+                    </p>
+                  )}
               </div>
 
               <div>
@@ -369,22 +405,26 @@ const fetchList = async () => {
                   <button
                     type="button"
                     onClick={() => setConfirmOpen(true)}
-                    className="flex-1 bg-[#d9444a] hover:bg-[#c23a40] transition text-white text-xs font-bold py-2.5 rounded-md"
+                    disabled={saving}
+                    className="flex-1 bg-[#d9444a] hover:bg-[#c23a40] transition text-white text-xs font-bold py-2.5 rounded-md disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     Hapus
                   </button>
                 )}
                 <button
                   type="submit"
-                  className="flex-1 bg-[#fbbf24] hover:bg-[#f59e0b] transition text-slate-900 text-xs font-bold py-2.5 rounded-md"
+                  disabled={saving}
+                  className="flex-1 bg-[#fbbf24] hover:bg-[#f59e0b] transition text-slate-900 text-xs font-bold py-2.5 rounded-md disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Simpan
+                  {saving ? "Menyimpan..." : "Simpan"}
                 </button>
               </div>
             </form>
           )}
         </div>
       </main>
+
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
 
       <ConfirmDialog
         open={confirmOpen}
