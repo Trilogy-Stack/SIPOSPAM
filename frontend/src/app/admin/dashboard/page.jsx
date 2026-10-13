@@ -9,12 +9,11 @@ import {
   MapPin,
   Phone,
   ChevronDown,
-  Bath,
-  Moon,
   Cross,
   ParkingCircle,
-  Coffee,
   Check,
+  Mosque,
+  Toilet,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getRegionScope } from "@/lib/regionScope";
@@ -23,11 +22,11 @@ import PhotoLightbox from "@/components/admin/PhotoLightbox";
 const CATEGORIES = ["Bencana", "Medis", "BBM", "Bengkel", "Keamanan"];
 const DEFAULT_FACILITIES = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
 const FACILITY_ICON = {
-  Toilet: Bath,
-  Mushola: Moon,
+  Toilet: Toilet,
+  Mushola: Mosque,
   Medis: Cross,
   "Parkir Area": ParkingCircle,
-  "Rest Area": Coffee,
+  "Rest Area": ParkingCircle,
 };
 
 // ---------- Normalisasi data backend ----------
