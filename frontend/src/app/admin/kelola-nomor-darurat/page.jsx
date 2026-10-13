@@ -6,7 +6,7 @@ import {
   Plus,
   Flame,
   HeartPulse,
-  Shield,
+  Siren,
   Fuel,
   Wrench,
   Phone,
@@ -36,7 +36,7 @@ const CATEGORIES = ["Bencana", "Medis", "Keamanan", "BBM", "Bengkel", "Lainnya"]
 const CATEGORY_ICON = {
   Bencana: Flame,
   Medis: HeartPulse,
-  Keamanan: Shield,
+  Keamanan: Siren,
   BBM: Fuel,
   Bengkel: Wrench,
   Lainnya: Phone,
