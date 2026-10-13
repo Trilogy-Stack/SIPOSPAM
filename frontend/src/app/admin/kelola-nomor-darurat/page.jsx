@@ -5,11 +5,11 @@ import Image from "next/image";
 import {
   Plus,
   Flame,
-  HeartPulse,
+  Hospital,
   Siren,
   Fuel,
   Wrench,
-  Phone,
+  PhoneCall,
 } from "lucide-react";
 
 import {
@@ -35,11 +35,11 @@ const CATEGORIES = ["Bencana", "Medis", "Keamanan", "BBM", "Bengkel", "Lainnya"]
 
 const CATEGORY_ICON = {
   Bencana: Flame,
-  Medis: HeartPulse,
+  Medis: Hospital,
   Keamanan: Siren,
   BBM: Fuel,
   Bengkel: Wrench,
-  Lainnya: Phone,
+  Lainnya: PhoneCall
 };
 
 const toDbCategory = (cat) => (cat ? cat.toLowerCase() : "");
