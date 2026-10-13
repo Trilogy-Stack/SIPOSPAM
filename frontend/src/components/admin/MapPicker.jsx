@@ -69,7 +69,7 @@ export default function MapPicker({ lat, lng, onChange, focusQuery = "", focusFa
       const map = L.map(containerRef.current, {
         center: hasPoint ? [la, ln] : DEFAULT_CENTER,
         zoom: hasPoint ? 16 : 13,
-        scrollWheelZoom: false, // supaya scroll halaman tidak tersangkut di peta
+        scrollWheelZoom: true, // scroll halaman di peta
       });
 
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {

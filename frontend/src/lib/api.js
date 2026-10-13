@@ -36,9 +36,11 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     console.error(
-      `Response backend [${res.status}] ${fetchOptions.method || "GET"} ${path}:`,
-      JSON.stringify(json, null, 2)
-    );
+  `Response backend [${res.status}] ${options.method || "GET"} ${path}:`,
+  JSON.stringify(json, null, 2),
+  "\nBody dikirim:",
+  options.body
+);
     const detail = Array.isArray(json.detail)
       ? json.detail.map((d) => `${d.field}: ${d.pesan}`).join(", ")
       : json.error_message || "";
