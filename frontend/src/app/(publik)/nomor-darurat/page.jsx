@@ -3,26 +3,31 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Phone,
-  MapPin,
   Locate,
+  Check,
+  X,
   Search,
   Flame,
-  HeartPulse,
-  Shield,
+  Hospital,
+  Siren,
+  PhoneCall,
   Fuel,
   Wrench,
 } from "lucide-react";
-import { getEmergencyApi, NASIONAL } from "@/lib/api";
+import { getEmergencyApi, getPospamsApi, NASIONAL } from "@/lib/api";
 import RegionSearch from "../components/regionSearch";
+import CallConfirmDialog from "../components/callConfirmDialog";
 
 // Ikon per kategori (sama dengan halaman kelola nomor darurat di admin; kategori disimpan huruf kecil)
 const CATEGORY_ICON = {
   bencana: Flame,
-  medis: HeartPulse,
-  keamanan: Shield,
+  medis: Hospital,
+  keamanan: Siren,
   bbm: Fuel,
   bengkel: Wrench,
+  Lainnya: PhoneCall
 };
+
 
 const TAMPIL_AWAL = 5; // jumlah layanan sekitar yang tampil sebelum "Tampilkan semua"
 
@@ -31,8 +36,6 @@ const toNum = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 };
-
-const telHref = (phone) => `tel:${String(phone || "").replace(/[^\d+]/g, "")}`;
 
 function haversine(lat1, lon1, lat2, lon2) {
   if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
@@ -50,24 +53,13 @@ function formatDistance(km) {
   return `${Number(km.toFixed(1))} Km`;
 }
 
-// Derajat desimal -> derajat, menit, detik. Contoh: 7°23'49.3"S
-function toDMS(value, pos, neg) {
-  const total = Math.round(Math.abs(value) * 3600 * 10); // persepuluh detik
-  const deg = Math.floor(total / 36000);
-  const rem = total % 36000;
-  const min = Math.floor(rem / 600);
-  const sec = ((rem % 600) / 10).toFixed(1);
-  return `${deg}°${min}'${sec}"${value >= 0 ? pos : neg}`;
-}
-const formatCoords = (lat, lng) => `${toDMS(lat, "N", "S")} ${toDMS(lng, "E", "W")}`;
-
 // Kotak ikon instansi; kalau gambar kosong atau gagal dimuat, tampil ikon telepon
 // (sama seperti tabel nomor nasional di superadmin)
 function NasionalIcon({ src }) {
   const [failed, setFailed] = useState(false);
 
   return (
-    <div className="w-[75px] h-[75px] rounded-2xl bg-[#e8ecf4] group-hover:bg-[#dde3ee] flex items-center justify-center p-2 overflow-hidden transition">
+    <div className="w-14 h-14 rounded-xl bg-[#e8ecf4] group-hover:bg-[#dde3ee] flex items-center justify-center p-1.5 overflow-hidden transition">
       {src && !failed ? (
         <img
           src={src}
@@ -76,7 +68,7 @@ function NasionalIcon({ src }) {
           className="w-full h-full object-contain"
         />
       ) : (
-        <Phone className="w-8 h-8 text-slate-400" />
+        <Phone className="w-6 h-6 text-slate-400" />
       )}
     </div>
   );
@@ -84,15 +76,18 @@ function NasionalIcon({ src }) {
 
 export default function NomorDaruratPage() {
   const [items, setItems] = useState([]);
+  // Titik pospam: dipakai HANYA untuk mendeteksi wilayah lokasi pemudik (sama seperti halaman Pospam Terdekat)
+  const [pospamPoints, setPospamPoints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [region, setRegion] = useState("");
   const [userCoords, setUserCoords] = useState(null);
-  const [lokasiLabel, setLokasiLabel] = useState("");
   const [isLoadingLoc, setIsLoadingLoc] = useState(false);
   const [locError, setLocError] = useState("");
   const [showAll, setShowAll] = useState(false);
+  // Instansi yang sedang menunggu konfirmasi panggilan (null = dialog tertutup)
+  const [callTarget, setCallTarget] = useState(null);
 
   useEffect(() => {
     getEmergencyApi({ limit: 1000 })
@@ -102,6 +97,22 @@ export default function NomorDaruratPage() {
         setError("Gagal memuat nomor darurat. Coba lagi nanti.");
       })
       .finally(() => setLoading(false));
+
+    // Gagal memuat pospam tidak boleh mengganggu daftar nomor darurat
+    getPospamsApi({ limit: 1000 })
+      .then((res) => {
+        const arr = Array.isArray(res) ? res : res?.data || [];
+        setPospamPoints(
+          arr
+            .map((p) => ({
+              region: p.region || "",
+              lat: toNum(p.latitude ?? p.lat),
+              lng: toNum(p.longitude ?? p.lng),
+            }))
+            .filter((p) => p.region && p.lat != null && p.lng != null)
+        );
+      })
+      .catch((err) => console.error("Gagal ambil data pospam:", err));
   }, []);
 
   // Nomor nasional (grid ikon) dan layanan lokal (punya koordinat) dipisah dari satu sumber data
@@ -114,12 +125,17 @@ export default function NomorDaruratPage() {
     [items]
   );
 
+  // Daftar wilayah = gabungan wilayah pospam dan wilayah layanan lokal (supaya sama dengan Pospam Terdekat)
   const availableRegions = useMemo(
     () =>
       Array.from(
-        new Set(lokal.map((n) => n.region).filter((r) => r && r.trim() !== "" && r !== "-"))
+        new Set(
+          [...pospamPoints, ...lokal]
+            .map((n) => n.region)
+            .filter((r) => r && r.trim() !== "" && r !== "-")
+        )
       ).sort(),
-    [lokal]
+    [pospamPoints, lokal]
   );
 
   // Daftar "Layanan di sekitar anda". null = belum ada wilayah dipilih dan lokasi belum aktif
@@ -160,10 +176,13 @@ export default function NomorDaruratPage() {
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 
-        // Wilayah lokasi pemudik = wilayah layanan terdekat
+        // Wilayah lokasi pemudik = wilayah POSPAM terdekat (sama dengan halaman Pospam Terdekat).
+        // Layanan darurat tidak ada di semua kabupaten/kota, jadi tidak cocok dipakai untuk
+        // menentukan wilayah. Kalau data pospam kosong, baru pakai layanan lokal sebagai cadangan.
+        const sumber = pospamPoints.length > 0 ? pospamPoints : lokal;
         let detected = "";
         let min = Infinity;
-        lokal.forEach((n) => {
+        sumber.forEach((n) => {
           const d = haversine(coords.lat, coords.lng, n.lat, n.lng);
           if (d !== null && d < min) {
             min = d;
@@ -172,7 +191,6 @@ export default function NomorDaruratPage() {
         });
 
         if (detected) setRegion(detected);
-        setLokasiLabel(detected || "Lokasi Anda");
         setUserCoords(coords);
         setShowAll(false);
         setIsLoadingLoc(false);
@@ -183,6 +201,14 @@ export default function NomorDaruratPage() {
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
+  };
+
+  // Kembali ke state awal (kosong), sama seperti halaman Pospam Terdekat
+  const handleResetLokasi = () => {
+    setUserCoords(null);
+    setRegion("");
+    setLocError("");
+    setShowAll(false);
   };
 
   const tampil = layanan ? (showAll ? layanan : layanan.slice(0, TAMPIL_AWAL)) : [];
@@ -209,21 +235,49 @@ export default function NomorDaruratPage() {
           />
         </div>
 
+        {/* Tombol Aktifkan Lokasi */}
         <button
           type="button"
           onClick={handleAktifkanLokasi}
           disabled={isLoadingLoc || loading}
-          className="w-full bg-[#0d5ab4] hover:bg-[#0b4f9f] disabled:opacity-70 text-white py-3.5 rounded-xl font-semibold text-base flex items-center justify-center gap-2 shadow-sm transition active:scale-[0.98]"
+          className={`w-full text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-98 disabled:opacity-70 ${
+            userCoords
+              ? "bg-emerald-600 hover:bg-emerald-700"
+              : "bg-blue-600 hover:bg-blue-700"
+          }`}
         >
-          {userCoords ? <MapPin className="w-5 h-5" /> : <Locate className="w-5 h-5" />}
-          {isLoadingLoc ? "Mendeteksi Lokasi..." : userCoords ? lokasiLabel : "Aktifkan Lokasi"}
+          <Locate className="w-4 h-4" />
+          {isLoadingLoc
+            ? "Mendeteksi Lokasi..."
+            : userCoords
+            ? "Perbarui Lokasi Saya"
+            : "Aktifkan Lokasi"}
         </button>
 
         {locError && <p className="text-xs text-red-600">{locError}</p>}
 
+        {/* Badge koordinat + tombol reset (X) */}
         {userCoords && (
-          <div className="rounded-xl border border-[#e8ecf4] bg-[#f7f8f9] py-3 text-center text-sm text-slate-800">
-            {formatCoords(userCoords.lat, userCoords.lng)}
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between shadow-sm animate-in fade-in duration-200">
+            <div className="flex flex-col text-left">
+              <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-xs">
+                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Lokasi Anda Berhasil Terdeteksi</span>
+              </div>
+              <p className="text-[11px] font-mono text-emerald-600 mt-0.5">
+                Lat: <span className="font-bold">{userCoords.lat.toFixed(6)}</span> | Lng:{" "}
+                <span className="font-bold">{userCoords.lng.toFixed(6)}</span>
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleResetLokasi}
+              title="Hapus filter lokasi"
+              className="bg-emerald-200/80 hover:bg-emerald-300 text-emerald-800 p-1.5 rounded-full transition shrink-0 ml-2"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
@@ -235,18 +289,19 @@ export default function NomorDaruratPage() {
         nasional.length > 0 && (
           <div className="grid grid-cols-3 justify-items-center gap-y-5 px-2 pt-2">
             {nasional.map((n) => (
-              <a
+              <button
+                type="button"
                 key={n.id}
-                href={telHref(n.telephone)}
+                onClick={() => setCallTarget(n)}
                 aria-label={`Hubungi ${n.agency_name} (${n.telephone})`}
                 title={`${n.agency_name} - ${n.telephone}`}
-                className="group flex w-[92px] flex-col items-center gap-1.5 transition active:scale-95"
+                className="group flex w-[88px] flex-col items-center gap-1.5 transition active:scale-95"
               >
                 <NasionalIcon src={n.icon} />
-                <span className="line-clamp-2 text-center text-[11px] font-medium leading-tight text-slate-700">
+                <span className="line-clamp-2 text-center text-[11px] font-bold leading-tight text-slate-800">
                   {n.agency_name}
                 </span>
-              </a>
+              </button>
             ))}
           </div>
         )
@@ -281,20 +336,21 @@ export default function NomorDaruratPage() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-900 leading-tight">
+                    <p className="text-sm font-bold text-slate-900 leading-tight">
                       {n.agency_name}
                       {n.distance != null && ` (${formatDistance(n.distance)})`}
                     </p>
                     <p className="text-xs text-slate-600 mt-0.5">{n.telephone}</p>
                   </div>
 
-                  <a
-                    href={telHref(n.telephone)}
+                  <button
+                    type="button"
+                    onClick={() => setCallTarget(n)}
                     aria-label={`Hubungi ${n.agency_name}`}
                     className="w-9 h-9 rounded-full bg-[#17a2b8] flex items-center justify-center shrink-0 transition active:scale-95"
                   >
                     <Phone className="w-4 h-4 text-white" />
-                  </a>
+                  </button>
                 </div>
               );
             })}
@@ -311,6 +367,9 @@ export default function NomorDaruratPage() {
           </>
         )}
       </section>
+
+      {/* Dialog konfirmasi sebelum menelepon (atau ke WA saat mode testing) */}
+      <CallConfirmDialog target={callTarget} onClose={() => setCallTarget(null)} />
     </div>
   );
 }
