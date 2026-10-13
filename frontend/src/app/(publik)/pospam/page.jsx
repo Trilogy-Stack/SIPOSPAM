@@ -19,6 +19,10 @@ import {
   Coffee,
   Check,
   Search,
+  Toilet,
+  ToiletIcon,
+  Park,
+  Mosque,
 } from "lucide-react";
 import { getPospamsApi } from "@/lib/api";
 import OneTapCall from "../components/oneTapCall";
@@ -33,11 +37,11 @@ const PublikMap = dynamic(() => import("@/components/shared/map/PublikMap"), {
 
 const DEFAULT_FACILITIES = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
 const FACILITY_ICON = {
-  Toilet: Bath,
-  Mushola: Moon,
+  Toilet: Toilet,
+  Mushola: Mosque,
   Medis: Cross,
   "Parkir Area": ParkingCircle,
-  "Rest Area": Coffee,
+  "Rest Area": Park,
 };
 
 const formatWaNumber = (phone) => {

@@ -4,12 +4,13 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   Plus,
-  Flame,
-  Hospital,
   Siren,
   Fuel,
   Wrench,
+  Phone,
+  Hospital,
   PhoneCall,
+  ShieldAlert,
 } from "lucide-react";
 
 import {
@@ -34,7 +35,7 @@ import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
 const CATEGORIES = ["Bencana", "Medis", "Keamanan", "BBM", "Bengkel", "Lainnya"];
 
 const CATEGORY_ICON = {
-  Bencana: Flame,
+  Bencana: ShieldAlert,
   Medis: Hospital,
   Keamanan: Siren,
   BBM: Fuel,
