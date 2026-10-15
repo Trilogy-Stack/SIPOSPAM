@@ -2,12 +2,57 @@
 
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
-import { Search, LocateFixed } from "lucide-react";
+import { JATENG_BOUNDS } from "@/lib/mapConfig";
 
-const DEFAULT_CENTER = [-7.3305, 110.5084]; // Salatiga
 const round = (n) => Math.round(n * 1e6) / 1e6;
 
 const PIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="40" viewBox="0 0 24 36"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="#dc2626" stroke="#991b1b" stroke-width="1"/><circle cx="12" cy="12" r="4.5" fill="#fff"/></svg>`;
+
+// Susun teks jalan/patokan dari hasil reverse geocoding Nominatim
+function buildStreetText(data) {
+  const a = data?.address || {};
+  const road = a.road || a.pedestrian || a.footway || a.path || a.hamlet || "";
+  const area = a.village || a.suburb || a.neighbourhood || a.quarter || "";
+
+  const parts = [road, area].filter(Boolean);
+  if (parts.length) return parts.join(", ");
+
+  // Cadangan: dua bagian pertama dari alamat lengkap
+  return String(data?.display_name || "")
+    .split(",")
+    .slice(0, 2)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .join(", ");
+}
+
+// Cari nama jalan dari koordinat pin (dipanggil hanya saat pin diatur manual).
+// Ditunda sebentar agar geser pin beruntun tidak membanjiri Nominatim (maks. 1 permintaan/detik).
+function lookupAddress(s, lat, lng) {
+  if (!s.onAddress) return;
+
+  clearTimeout(s.addrTimer);
+  const token = ++s.addrToken;
+  s.setError?.("");
+
+  s.addrTimer = setTimeout(async () => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=id&lat=${lat}&lon=${lng}`
+      );
+      const data = await res.json();
+      if (token !== s.addrToken) return; // pin sudah dipindah lagi
+
+      const text = buildStreetText(data);
+      if (text) s.onAddress(text);
+      else s.setError?.("Nama jalan tidak ditemukan di titik ini. Isi manual pada kolom di atas.");
+    } catch {
+      if (token === s.addrToken) {
+        s.setError?.("Gagal mengambil nama jalan. Isi manual pada kolom di atas.");
+      }
+    }
+  }, 600);
+}
 
 // Menaruh atau memindahkan pin
 function placeMarker(s, la, ln, pan) {
@@ -27,7 +72,10 @@ function placeMarker(s, la, ln, pan) {
 
     marker.on("dragend", () => {
       const p = marker.getLatLng();
-      s.onChange?.({ lat: round(p.lat), lng: round(p.lng) });
+      const a = round(p.lat);
+      const b = round(p.lng);
+      s.onChange?.({ lat: a, lng: b });
+      lookupAddress(s, a, b);
     });
     s.marker = marker;
   } else {
@@ -37,13 +85,33 @@ function placeMarker(s, la, ln, pan) {
   if (pan) map.setView([la, ln], Math.max(map.getZoom(), 16));
 }
 
-export default function MapPicker({ lat, lng, onChange, focusQuery = "", focusFallback = "" , searchRequest = null }) {
+/**
+ * Pin diatur manual: klik peta atau geser pin.
+ * onChange({ lat, lng })  -> koordinat baru
+ * onAddress(text)         -> nama jalan hasil reverse geocoding (hanya saat pin diatur manual,
+ *                            bukan saat data edit dimuat, sehingga isian tersimpan tidak tertimpa)
+ */
+export default function MapPicker({
+  lat,
+  lng,
+  onChange,
+  onAddress,
+  focusQuery = "",
+  focusFallback = "",
+}) {
   const containerRef = useRef(null);
-  const stateRef = useRef({ L: null, map: null, marker: null, onChange });
+  const stateRef = useRef({
+    L: null,
+    map: null,
+    marker: null,
+    onChange,
+    onAddress,
+    setError: null,
+    addrTimer: null,
+    addrToken: 0,
+  });
   const focusToken = useRef(0);
   const [ready, setReady] = useState(false);
-  const [query, setQuery] = useState("");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const toNum = (v) => (v === null || v === undefined || v === "" ? NaN : Number(v));
@@ -51,9 +119,11 @@ export default function MapPicker({ lat, lng, onChange, focusQuery = "", focusFa
   const ln = toNum(lng);
   const hasPoint = Number.isFinite(la) && Number.isFinite(ln);
 
-  // Selalu pakai onChange terbaru
+  // Selalu pakai callback terbaru
   useEffect(() => {
     stateRef.current.onChange = onChange;
+    stateRef.current.onAddress = onAddress;
+    stateRef.current.setError = setError;
   });
 
   // Inisialisasi peta (sekali)
@@ -67,10 +137,12 @@ export default function MapPicker({ lat, lng, onChange, focusQuery = "", focusFa
 
       s.L = L;
       const map = L.map(containerRef.current, {
-        center: hasPoint ? [la, ln] : DEFAULT_CENTER,
-        zoom: hasPoint ? 16 : 13,
         scrollWheelZoom: true, // scroll halaman di peta
       });
+
+      // Tampilan awal: seluruh Jawa Tengah, atau langsung ke pin kalau sedang edit data
+      if (hasPoint) map.setView([la, ln], 16);
+      else map.fitBounds(JATENG_BOUNDS);
 
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
@@ -82,6 +154,7 @@ export default function MapPicker({ lat, lng, onChange, focusQuery = "", focusFa
         const b = round(e.latlng.lng);
         placeMarker(s, a, b, false);
         s.onChange?.({ lat: a, lng: b });
+        lookupAddress(s, a, b);
       });
 
       s.map = map;
@@ -91,6 +164,8 @@ export default function MapPicker({ lat, lng, onChange, focusQuery = "", focusFa
 
     return () => {
       cancelled = true;
+      clearTimeout(s.addrTimer);
+      s.addrToken++;
       if (s.map) s.map.remove();
       s.map = null;
       s.marker = null;
@@ -98,176 +173,74 @@ export default function MapPicker({ lat, lng, onChange, focusQuery = "", focusFa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Pindahkan peta ke jalan/patokan yang dicari (pin tidak ditaruh otomatis)
-useEffect(() => {
-  const s = stateRef.current;
-  if (!ready || !s.map || !searchRequest?.queries?.length) return;
-
-  const token = ++focusToken.current;
-  setError("");
-
-  (async () => {
-    for (const q of searchRequest.queries) {
-      try {
-        const r = await geocode(q);
-        if (token !== focusToken.current) return;
-        if (!r) continue;
-
-        if (r.boundingbox) {
-          const [south, north, west, east] = r.boundingbox.map(Number);
-          s.map.fitBounds(s.L.latLngBounds([south, west], [north, east]), {
-            maxZoom: 17,
-            animate: true,
-          });
-        } else {
-          s.map.setView([parseFloat(r.lat), parseFloat(r.lon)], 17, { animate: true });
-        }
-        return;
-      } catch {
-        // coba kata kunci berikutnya
-      }
-    }
-    if (token === focusToken.current) {
-      setError("Jalan/patokan tidak ditemukan di peta. Klik peta untuk menentukan titik secara manual.");
-    }
-  })();
-}, [searchRequest, ready]);
-
   // Sinkronkan pin kalau lat/lng berubah dari luar (misalnya saat buka data edit)
-useEffect(() => {
-  const s = stateRef.current;
-  if (!ready || !s.map) return;
+  useEffect(() => {
+    const s = stateRef.current;
+    if (!ready || !s.map) return;
 
-  if (!hasPoint) {
-    if (s.marker) {
-      s.marker.remove();
-      s.marker = null;
-      s.map.setView(DEFAULT_CENTER, 13); // form dikosongkan → peta kembali ke posisi awal
-    }
-    return;
-  }
-
-  const cur = s.marker?.getLatLng();
-  if (!cur || Math.abs(cur.lat - la) > 1e-7 || Math.abs(cur.lng - ln) > 1e-7) {
-    placeMarker(s, la, ln, true);
-  }
-}, [la, ln, hasPoint, ready]);
-
-// Arahkan peta ke wilayah yang dipilih (kecamatan, lalu cadangan kab/kota)
-useEffect(() => {
-  const s = stateRef.current;
-  if (!ready || !s.map || !focusQuery) return;
-
-  const token = ++focusToken.current; // abaikan hasil lama jika pilihan berubah cepat
-
-  (async () => {
-    for (const q of [focusQuery, focusFallback].filter(Boolean)) {
-      try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=id&accept-language=id&q=${encodeURIComponent(q)}`
-        );
-        const data = await res.json();
-        if (token !== focusToken.current) return;
-        if (!data.length) continue;
-
-        const r = data[0];
-        if (r.boundingbox) {
-          const [south, north, west, east] = r.boundingbox.map(Number);
-          s.map.fitBounds(s.L.latLngBounds([south, west], [north, east]), {
-            maxZoom: 15,
-            animate: true,
-          });
-        } else {
-          s.map.setView([parseFloat(r.lat), parseFloat(r.lon)], 14, { animate: true });
-        }
-        return;
-      } catch {
-        // coba kata kunci berikutnya
+    if (!hasPoint) {
+      if (s.marker) {
+        s.marker.remove();
+        s.marker = null;
+        s.map.fitBounds(JATENG_BOUNDS); // form dikosongkan → peta kembali ke seluruh Jawa Tengah
       }
+      return;
     }
-  })();
-}, [focusQuery, focusFallback, ready]);
 
-  const goTo = (a, b) => {
-    placeMarker(stateRef.current, a, b, true);
-    onChange({ lat: round(a), lng: round(b) });
-  };
-
-  // Cari nama tempat (Nominatim / OpenStreetMap)
-  const handleSearch = async () => {
-    const q = query.trim();
-    if (!q) return;
-    setBusy(true);
-    setError("");
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=id&q=${encodeURIComponent(q)}`
-      );
-      const data = await res.json();
-      if (!data.length) setError("Lokasi tidak ditemukan.");
-      else goTo(parseFloat(data[0].lat), parseFloat(data[0].lon));
-    } catch {
-      setError("Gagal mencari lokasi. Coba lagi.");
-    } finally {
-      setBusy(false);
+    const cur = s.marker?.getLatLng();
+    if (!cur || Math.abs(cur.lat - la) > 1e-7 || Math.abs(cur.lng - ln) > 1e-7) {
+      placeMarker(s, la, ln, true);
     }
-  };
+  }, [la, ln, hasPoint, ready]);
 
-  const handleLocate = () => {
-    if (!navigator.geolocation) return setError("Browser tidak mendukung lokasi.");
-    setError("");
-    navigator.geolocation.getCurrentPosition(
-      (pos) => goTo(pos.coords.latitude, pos.coords.longitude),
-      () => setError("Tidak bisa mengambil lokasi. Izinkan akses lokasi di browser."),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  };
+  // Arahkan peta ke wilayah yang dipilih (kecamatan, lalu cadangan kab/kota)
+  useEffect(() => {
+    const s = stateRef.current;
+    if (!ready || !s.map || !focusQuery) return;
+
+    const token = ++focusToken.current; // abaikan hasil lama jika pilihan berubah cepat
+
+    (async () => {
+      for (const q of [focusQuery, focusFallback].filter(Boolean)) {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=id&accept-language=id&q=${encodeURIComponent(q)}`
+          );
+          const data = await res.json();
+          if (token !== focusToken.current) return;
+          if (!data.length) continue;
+
+          const r = data[0];
+          if (r.boundingbox) {
+            const [south, north, west, east] = r.boundingbox.map(Number);
+            s.map.fitBounds(s.L.latLngBounds([south, west], [north, east]), {
+              maxZoom: 15,
+              animate: true,
+            });
+          } else {
+            s.map.setView([parseFloat(r.lat), parseFloat(r.lon)], 14, { animate: true });
+          }
+          return;
+        } catch {
+          // coba kata kunci berikutnya
+        }
+      }
+    })();
+  }, [focusQuery, focusFallback, ready]);
 
   return (
     <div className="space-y-2">
-      {/* Cari lokasi */}
-      <div className="flex gap-2">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault(); // cegah submit form utama
-              handleSearch();
-            }
-          }}
-          placeholder="Cari tempat, misalnya Pasar Sapi Salatiga"
-          className="flex-1 min-w-0 border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]"
-        />
-        <button
-          type="button"
-          onClick={handleSearch}
-          disabled={busy}
-          className="bg-[#1a9fb8] hover:bg-[#158aa0] disabled:opacity-50 text-white rounded-md px-3 flex items-center"
-          title="Cari"
-        >
-          <Search className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={handleLocate}
-          className="border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-md px-3 flex items-center"
-          title="Gunakan lokasi saya"
-        >
-          <LocateFixed className="w-4 h-4" />
-        </button>
-      </div>
-      {error && <p className="text-xs text-red-500">{error}</p>}
-
       {/* Peta ("isolate" agar layer Leaflet tidak menutupi dropdown/dialog lain) */}
       <div className="relative isolate rounded-md overflow-hidden border border-slate-200">
         <div ref={containerRef} className="h-[280px] md:h-[360px] w-full" />
       </div>
 
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
       <p className="text-xs text-slate-600">
         {hasPoint
           ? `Koordinat: ${la.toFixed(6)}, ${ln.toFixed(6)} (geser pin atau klik peta untuk mengubah)`
-          : "Klik peta atau cari tempat untuk menaruh pin lokasi."}
+          : "Klik peta untuk menaruh pin lokasi, lalu geser pin untuk menyesuaikan."}
       </p>
     </div>
   );
