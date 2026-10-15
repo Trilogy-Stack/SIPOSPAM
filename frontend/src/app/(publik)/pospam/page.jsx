@@ -290,7 +290,7 @@ export default function PospamPage() {
         </p>
       </div> */}
             {/* Peta */}
-      <div className="w-full h-44 bg-blue-100 rounded-2xl overflow-hidden relative isolate flex items-center justify-center border border-blue-200">
+      <div className="w-full h-72 bg-blue-100 rounded-2xl overflow-hidden relative isolate flex items-center justify-center border border-blue-200">
         <PublikMap pospams={pospams.length ? pospams : allPospams} userCoords={userCoords} />
       </div>
 

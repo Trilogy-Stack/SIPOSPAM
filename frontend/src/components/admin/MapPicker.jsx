@@ -27,7 +27,6 @@ function buildStreetText(data) {
 }
 
 // Cari nama jalan dari koordinat pin (dipanggil hanya saat pin diatur manual).
-// Ditunda sebentar agar geser pin beruntun tidak membanjiri Nominatim (maks. 1 permintaan/detik).
 function lookupAddress(s, lat, lng) {
   if (!s.onAddress) return;
 
@@ -41,7 +40,7 @@ function lookupAddress(s, lat, lng) {
         `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=id&lat=${lat}&lon=${lng}`
       );
       const data = await res.json();
-      if (token !== s.addrToken) return; // pin sudah dipindah lagi
+      if (token !== s.addrToken) return;
 
       const text = buildStreetText(data);
       if (text) s.onAddress(text);
@@ -85,12 +84,6 @@ function placeMarker(s, la, ln, pan) {
   if (pan) map.setView([la, ln], Math.max(map.getZoom(), 16));
 }
 
-/**
- * Pin diatur manual: klik peta atau geser pin.
- * onChange({ lat, lng })  -> koordinat baru
- * onAddress(text)         -> nama jalan hasil reverse geocoding (hanya saat pin diatur manual,
- *                            bukan saat data edit dimuat, sehingga isian tersimpan tidak tertimpa)
- */
 export default function MapPicker({
   lat,
   lng,
@@ -137,17 +130,50 @@ export default function MapPicker({
 
       s.L = L;
       const map = L.map(containerRef.current, {
-        scrollWheelZoom: true, // scroll halaman di peta
+        scrollWheelZoom: true,
       });
 
       // Tampilan awal: seluruh Jawa Tengah, atau langsung ke pin kalau sedang edit data
       if (hasPoint) map.setView([la, ln], 16);
       else map.fitBounds(JATENG_BOUNDS);
 
-      L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      // ======================================================================
+      // TILE LAYERS: OpenStreetMap (jalan) + Esri World Imagery (satelit)
+      // ======================================================================
+      const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
-        attribution: "&copy; OpenStreetMap",
-      }).addTo(map);
+        attribution: "&copy; OpenStreetMap contributors",
+      });
+
+      const esriImagery = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        {
+          maxZoom: 19,
+          attribution: "Tiles &copy; Esri &mdash; Maxar, Earthstar Geographics, dan kontributor GIS",
+        }
+      );
+
+      // Label nama tempat di atas citra satelit
+      const esriLabels = L.tileLayer(
+        "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+        { maxZoom: 19 }
+      );
+      const satelit = L.layerGroup([esriImagery, esriLabels]);
+
+      // Tampilan default: OpenStreetMap
+      osm.addTo(map);
+
+      // Pilihan layer di pojok kanan atas
+      L.control
+        .layers(
+          {
+            "Peta Jalan": osm,
+            "Satelit + Nama Tempat": satelit,
+          },
+          null,
+          { position: "topright" }
+        )
+        .addTo(map);
 
       map.on("click", (e) => {
         const a = round(e.latlng.lat);
@@ -173,7 +199,7 @@ export default function MapPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sinkronkan pin kalau lat/lng berubah dari luar (misalnya saat buka data edit)
+  // Sinkronkan pin kalau lat/lng berubah dari luar
   useEffect(() => {
     const s = stateRef.current;
     if (!ready || !s.map) return;
@@ -182,7 +208,7 @@ export default function MapPicker({
       if (s.marker) {
         s.marker.remove();
         s.marker = null;
-        s.map.fitBounds(JATENG_BOUNDS); // form dikosongkan → peta kembali ke seluruh Jawa Tengah
+        s.map.fitBounds(JATENG_BOUNDS);
       }
       return;
     }
@@ -193,12 +219,12 @@ export default function MapPicker({
     }
   }, [la, ln, hasPoint, ready]);
 
-  // Arahkan peta ke wilayah yang dipilih (kecamatan, lalu cadangan kab/kota)
+  // Arahkan peta ke wilayah yang dipilih
   useEffect(() => {
     const s = stateRef.current;
     if (!ready || !s.map || !focusQuery) return;
 
-    const token = ++focusToken.current; // abaikan hasil lama jika pilihan berubah cepat
+    const token = ++focusToken.current;
 
     (async () => {
       for (const q of [focusQuery, focusFallback].filter(Boolean)) {
@@ -230,7 +256,6 @@ export default function MapPicker({
 
   return (
     <div className="space-y-2">
-      {/* Peta ("isolate" agar layer Leaflet tidak menutupi dropdown/dialog lain) */}
       <div className="relative isolate rounded-md overflow-hidden border border-slate-200">
         <div ref={containerRef} className="h-[280px] md:h-[360px] w-full" />
       </div>
