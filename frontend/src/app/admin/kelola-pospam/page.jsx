@@ -454,6 +454,7 @@ const handleDelete = async () => {
                   lat={form.lat}
                   lng={form.lng}
                   onChange={({ lat, lng }) => setForm((f) => ({ ...f, lat, lng }))}
+                  onAddress={(street) => setForm((f) => ({ ...f, street }))}
                   focusQuery={focus.main}
                   focusFallback={focus.fallback}
                 />
