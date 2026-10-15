@@ -25,9 +25,8 @@ const CATEGORY_ICON = {
   keamanan: Siren,
   bbm: Fuel,
   bengkel: Wrench,
-  Lainnya: PhoneCall
+  Lainnya: PhoneCall,
 };
-
 
 const TAMPIL_AWAL = 5; // jumlah layanan sekitar yang tampil sebelum "Tampilkan semua"
 
@@ -53,13 +52,13 @@ function formatDistance(km) {
   return `${Number(km.toFixed(1))} Km`;
 }
 
-// Kotak ikon instansi; kalau gambar kosong atau gagal dimuat, tampil ikon telepon
-// (sama seperti tabel nomor nasional di superadmin)
+// Logo instansi tanpa kotak/latar di sekelilingnya; kalau gambar kosong atau gagal dimuat,
+// tampil ikon telepon
 function NasionalIcon({ src }) {
   const [failed, setFailed] = useState(false);
 
   return (
-    <div className="w-14 h-14 rounded-xl bg-[#e8ecf4] group-hover:bg-[#dde3ee] flex items-center justify-center p-1.5 overflow-hidden transition">
+    <div className="w-14 h-14 flex items-center justify-center overflow-hidden">
       {src && !failed ? (
         <img
           src={src}
@@ -241,9 +240,7 @@ export default function NomorDaruratPage() {
           onClick={handleAktifkanLokasi}
           disabled={isLoadingLoc || loading}
           className={`w-full text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-98 disabled:opacity-70 ${
-            userCoords
-              ? "bg-emerald-600 hover:bg-emerald-700"
-              : "bg-blue-600 hover:bg-blue-700"
+            userCoords ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"
           }`}
         >
           <Locate className="w-4 h-4" />
@@ -282,12 +279,12 @@ export default function NomorDaruratPage() {
         )}
       </div>
 
-      {/* Nomor nasional: kotak ikon, ketuk untuk menelepon */}
+      {/* Nomor nasional: kartu putih berisi logo, ketuk untuk menelepon */}
       {loading ? (
         <p className="text-xs text-slate-500 text-center py-6">Memuat...</p>
       ) : (
         nasional.length > 0 && (
-          <div className="grid grid-cols-3 justify-items-center gap-y-5 px-2 pt-2">
+          <div className="grid grid-cols-3 gap-3 px-2 pt-2">
             {nasional.map((n) => (
               <button
                 type="button"
@@ -295,10 +292,12 @@ export default function NomorDaruratPage() {
                 onClick={() => setCallTarget(n)}
                 aria-label={`Hubungi ${n.agency_name} (${n.telephone})`}
                 title={`${n.agency_name} - ${n.telephone}`}
-                className="group flex w-[88px] flex-col items-center gap-1.5 transition active:scale-95"
+                className="group flex aspect-square w-full flex-col items-center justify-center rounded-2xl bg-white p-2.5 shadow-sm border border-slate-100 transition hover:shadow-md active:scale-95"
               >
+                {/* Logo langsung di atas kartu, tanpa kotak di dalamnya */}
                 <NasionalIcon src={n.icon} />
-                <span className="line-clamp-2 text-center text-[11px] font-bold leading-tight text-slate-800">
+
+                <span className="mt-1.5 line-clamp-2 text-center text-[11px] font-bold leading-tight text-slate-800">
                   {n.agency_name}
                 </span>
               </button>
