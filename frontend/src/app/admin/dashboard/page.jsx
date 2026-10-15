@@ -14,6 +14,7 @@ import {
   Check,
   Mosque,
   Toilet,
+  ExternalLink, 
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { getRegionScope } from "@/lib/regionScope";
@@ -71,19 +72,30 @@ const formatCoord = (lat, lng) =>
 function MapEmbed({ lat, lng }) {
   if (lat == null || lng == null) {
     return (
-      <div className="h-[180px] rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-400">
+      <div className="h-[280px] rounded-lg bg-slate-100 flex items-center justify-center text-xs text-slate-400">
         Lokasi belum diatur
       </div>
     );
   }
   return (
-    <div className="h-[180px] rounded-lg overflow-hidden border border-slate-200">
-      <iframe
-        title="Peta lokasi"
-        className="w-full h-full"
-        loading="lazy"
-        src={`https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`}
-      />
+    <div className="space-y-1.5">
+      <div className="h-[280px] rounded-lg overflow-hidden border border-slate-200">
+        <iframe
+          title="Peta lokasi"
+          className="w-full h-full"
+          loading="lazy"
+          src={`https://maps.google.com/maps?q=${lat},${lng}&z=15&output=embed`}
+        />
+      </div>
+      <a
+        href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 text-xs md:text-sm font-medium text-[#1a9fb8] hover:text-[#158aa0] hover:underline"
+      >
+        <ExternalLink className="w-3.5 h-3.5" />
+        Buka di Google Maps
+      </a>
     </div>
   );
 }
