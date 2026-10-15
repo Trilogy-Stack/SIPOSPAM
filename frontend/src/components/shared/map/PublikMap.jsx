@@ -1,7 +1,7 @@
 // src/components/shared/map/PublikMap.jsx
 // Peta untuk halaman publik: titik pospam + titik lokasi pemudik (kalau lokasi diaktifkan).
 "use client";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -34,7 +34,20 @@ function FitView({ points, userCoords }) {
   return null;
 }
 
+const TILES = {
+  peta: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: "&copy; OpenStreetMap contributors",
+  },
+  satelit: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Tiles &copy; Esri &mdash; Maxar, Earthstar Geographics, dan kontributor GIS",
+  },
+};
+
 export default function PublikMap({ pospams = [], userCoords = null }) {
+  const [mode, setMode] = useState("peta"); // "peta" | "satelit"
+
   // Hanya titik yang koordinatnya valid; PospamMarker membaca nama dari field "nama"
   const points = useMemo(
     () =>
@@ -44,31 +57,41 @@ export default function PublikMap({ pospams = [], userCoords = null }) {
     [pospams]
   );
 
+  const tile = TILES[mode];
+
   return (
-    <MapContainer
-      bounds={JATENG_BOUNDS}
-      scrollWheelZoom={false}
-      style={{ height: "100%", width: "100%" }}
-    >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution="&copy; OpenStreetMap contributors"
-      />
-      <FitView points={points} userCoords={userCoords} />
+    <div className="relative h-full w-full">
+      <MapContainer
+        bounds={JATENG_BOUNDS}
+        scrollWheelZoom={false}
+        style={{ height: "100%", width: "100%" }}
+      >
+        <TileLayer key={mode} url={tile.url} attribution={tile.attribution} />
+        <FitView points={points} userCoords={userCoords} />
 
-      {points.map((p) => (
-        <PospamMarker key={p.id} pospam={p} />
-      ))}
+        {points.map((p) => (
+          <PospamMarker key={p.id} pospam={p} />
+        ))}
 
-      {userCoords && (
-        <CircleMarker
-          center={[userCoords.lat, userCoords.lng]}
-          radius={9}
-          pathOptions={{ color: "#ffffff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }}
-        >
-          <Popup>Lokasi Anda</Popup>
-        </CircleMarker>
-      )}
-    </MapContainer>
+        {userCoords && (
+          <CircleMarker
+            center={[userCoords.lat, userCoords.lng]}
+            radius={9}
+            pathOptions={{ color: "#ffffff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }}
+          >
+            <Popup>Lokasi Anda</Popup>
+          </CircleMarker>
+        )}
+      </MapContainer>
+
+      {/* Tombol ganti tampilan, kiri bawah seperti di Google Maps */}
+      <button
+        type="button"
+        onClick={() => setMode((m) => (m === "peta" ? "satelit" : "peta"))}
+        className="absolute bottom-6 left-2 z-[1000] rounded-md bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-700 shadow-md ring-1 ring-black/10 hover:bg-slate-50 active:scale-95 transition"
+      >
+        {mode === "peta" ? "Satelit" : "Peta"}
+      </button>
+    </div>
   );
 }
