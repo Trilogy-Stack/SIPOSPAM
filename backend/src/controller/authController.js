@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from "../config/supabase.js";
+import { supabase, supabaseAdmin, createStatelessClient } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 
 // 1. Endpoint Login Admin
@@ -53,8 +53,22 @@ export const me = wrap(async (req, res) => {
 });
 
 // 3. Dipakai admin baru di login pertama (dan boleh kapan saja sesudahnya)
+//    Wajib menyertakan password lama, supaya sesi yang tertinggal terbuka tidak bisa
+//    dipakai orang lain untuk mengganti password.
 export const gantiPassword = wrap(async (req, res) => {
-  const { password_baru } = req.valid.body;
+  const { password_lama, password_baru } = req.valid.body;
+
+  // Verifikasi password lama dengan client sementara (tidak menyimpan sesi)
+  const { error: errLama } = await createStatelessClient().auth.signInWithPassword({
+    email: req.user.email,
+    password: password_lama,
+  });
+  if (errLama) {
+    if (errLama.status === 429) {
+      throw new HttpError(429, "Terlalu banyak percobaan. Coba lagi beberapa menit lagi");
+    }
+    throw new HttpError(400, "Password lama salah");
+  }
 
   // Gunakan supabaseAdmin untuk update user di Auth
   const { error } = await supabaseAdmin.auth.admin.updateUserById(req.user.id, {

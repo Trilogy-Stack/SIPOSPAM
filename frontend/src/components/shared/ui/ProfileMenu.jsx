@@ -3,9 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, KeyRound, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import SendResetLinkDialog from "./SendResetLinkDialog";
 
 export default function ProfileMenu({ mobile = false }) {
   const [open, setOpen] = useState(false);
+  const [pwOpen, setPwOpen] = useState(false);
   const ref = useRef(null);
   const { profile, logout } = useAuth();
 
@@ -69,12 +71,12 @@ export default function ProfileMenu({ mobile = false }) {
         >
           <button
             onClick={() => {
-              /* TODO: alur lupa password */
               setOpen(false);
+              setPwOpen(true);
             }}
             className="w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-gray-50 text-left"
           >
-            <KeyRound size={16} /> Lupa Password
+            <KeyRound size={16} /> Ganti Password
           </button>
           <button
             onClick={logout}
@@ -84,6 +86,13 @@ export default function ProfileMenu({ mobile = false }) {
           </button>
         </div>
       )}
+
+      {/* Ganti password lewat link yang dikirim ke email akun */}
+      <SendResetLinkDialog
+        open={pwOpen}
+        email={profile?.email}
+        onClose={() => setPwOpen(false)}
+      />
     </div>
   );
 }

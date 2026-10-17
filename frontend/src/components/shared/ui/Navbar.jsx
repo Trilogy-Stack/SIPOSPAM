@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import ProfileMenu from "./ProfileMenu";
+import ForcePasswordChange from "./ForcePasswordChange";
 
 function Logo({ title }) {
   return (
@@ -131,6 +132,9 @@ export default function Navbar({ title, items, badge }) {
           </div>
         </div>
       )}
+
+      {/* Memaksa ganti password pada login pertama (must_change_password = true) */}
+      <ForcePasswordChange />
     </nav>
   );
 }
