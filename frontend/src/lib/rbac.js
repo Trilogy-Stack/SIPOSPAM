@@ -28,3 +28,10 @@ export function isProtectedPath(pathname) {
     pathname.startsWith("/superadmin/")
   );
 }
+
+// Slot session per area: akun /admin dan /superadmin disimpan di cookie berbeda,
+// sehingga dua role bisa login bersamaan di tab berbeda pada satu browser.
+export const slotFor = (pathname = "") =>
+  pathname === "/superadmin" || pathname.startsWith("/superadmin/") ? "superadmin" : "admin";
+export const slotForRole = (role) => (role === "super_admin" ? "superadmin" : "admin");
+export const cookieNameFor = (slot) => `sb-${slot}-auth-token`;

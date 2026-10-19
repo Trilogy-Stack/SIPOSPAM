@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { getMe } from "@/lib/api";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginForm() {
@@ -21,8 +20,7 @@ export default function LoginForm() {
     setError("");
     setSubmitting(true);
     try {
-      await login(email, password);
-      const me = await getMe(); // { id, email, role, wilayah }
+      const me = await login(email, password); // { id, email, role, wilayah }
       router.push(me.role === "super_admin" ? "/superadmin/dashboard" : "/admin/dashboard");
     } catch (err) {
       setError(err.message || "Login gagal. Periksa email dan password.");

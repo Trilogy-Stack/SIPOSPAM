@@ -3,7 +3,7 @@
 // karena matcher di bawah hanya mencakup dua prefix itu.
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { ROLE_PREFIX, isAllowed, homeFor } from "./lib/rbac";
+import { ROLE_PREFIX, isAllowed, homeFor, slotFor, cookieNameFor } from "./lib/rbac";
 
 const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
@@ -21,6 +21,7 @@ export async function proxy(request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     {
+      cookieOptions: { name: cookieNameFor(slotFor(pathname)) },
       cookies: {
         getAll: () => request.cookies.getAll(),
         // Dipanggil saat token disegarkan: tulis ulang cookie ke request dan response
