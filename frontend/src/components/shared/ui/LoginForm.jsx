@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff } from "lucide-react";
@@ -95,19 +96,23 @@ export default function LoginForm() {
             </div>
           </div>
 
-          {/* Remember Me & Forgot Password */}
-          <div className="flex items-center justify-end text-xs mt-1">
-        
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                alert("Silakan hubungi administrator untuk reset password.");
-              }}
+          {/*Forgot Password */}
+          <div className="flex items-center justify-between text-xs mt-1">
+            <label className="flex items-center gap-2 cursor-pointer text-gray-600">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="rounded border-gray-300 text-[#00a3c4] focus:ring-[#00a3c4]"
+              />
+              <span>Ingat saya</span>
+            </label>
+            <Link
+              href="/lupa-password"
               className="text-[#00a3c4] font-medium hover:underline"
             >
               Lupa Password?
-            </a>
+            </Link>
           </div>
 
           {/* Alert Error */}

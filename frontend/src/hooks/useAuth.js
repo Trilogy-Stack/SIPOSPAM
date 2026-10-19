@@ -73,5 +73,5 @@ async function logout() {
   router.refresh();
 }
 
-  return { profile, loading, login, logout };
+  return { profile, loading, login, logout, refreshProfile: loadProfile };
 }

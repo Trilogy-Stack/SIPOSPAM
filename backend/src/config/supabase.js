@@ -15,5 +15,12 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Client admin (bypass RLS & akses Supabase Auth Admin API)
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
+// Client sementara tanpa penyimpanan sesi, khusus untuk memverifikasi password.
+// Dibuat baru setiap kali dipakai supaya tidak memengaruhi client bersama di atas.
+export const createStatelessClient = () =>
+  createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  });
+
 export const BUCKET_FOTO = "foto-pospam";
 export default supabase;

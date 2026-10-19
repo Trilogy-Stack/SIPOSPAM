@@ -55,6 +55,11 @@ async function request(path, options = {}) {
 
 // --- Auth ---
 export const getMe = () => request("/api/auth/me");
+export const gantiPassword = ({ password_lama, password_baru }) =>
+  request("/api/auth/ganti-password", {
+    method: "PUT",
+    body: JSON.stringify({ password_lama, password_baru }),
+  });
 
 // --- Kelola Admin (Superadmin) ---
 export const getAdminList = (q = "") =>

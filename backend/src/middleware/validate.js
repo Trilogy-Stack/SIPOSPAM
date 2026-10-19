@@ -77,9 +77,15 @@ export const loginBody = z.object({
   password: z.string().min(1, "Password wajib diisi"),
 });
 
-export const gantiPasswordBody = z.object({
-  password_baru: z.string().min(8, "Password minimal 8 karakter").max(72),
-});
+export const gantiPasswordBody = z
+  .object({
+    password_lama: z.string().min(1, "Password lama wajib diisi").max(72),
+    password_baru: z.string().min(8, "Password minimal 8 karakter").max(72),
+  })
+  .refine((d) => d.password_baru !== d.password_lama, {
+    message: "Password baru harus berbeda dari password lama",
+    path: ["password_baru"],
+  });
 
 /* ------------------------------------------------------------------ */
 /* Query                                                              */
