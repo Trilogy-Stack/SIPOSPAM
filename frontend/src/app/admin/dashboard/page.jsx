@@ -238,7 +238,7 @@ async function fetchData() {
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-[#eaedf6] font-sans pb-12">
-      <main className="w-[84%] mx-auto pt-5 space-y-4">
+      <main className="w-[calc(100%-3rem)] max-w-7xl mx-auto pt-5 space-y-4">
         {/* Judul & Tanggal */}
     <div className="flex items-start justify-between">
       <div className="flex items-center gap-3">

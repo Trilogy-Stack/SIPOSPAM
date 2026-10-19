@@ -9,8 +9,24 @@ import FlyToRegion from "./FlyToRegion";
 import JatengMask from "./JatengMask";
 import { JATENG_BOUNDS, JATENG_PAN_BOUNDS } from "@/lib/mapConfig";
 
+import { Map as MapIcon, Satellite } from "lucide-react";
+
 const PADDING = [10, 10];
 const FIT_OPTIONS = { padding: PADDING, animate: false };
+
+// Pilihan tampilan peta dasar
+const TILES = {
+  peta: {
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: "&copy; OpenStreetMap contributors",
+    maxNativeZoom: 19,
+  },
+  satelit: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attribution: "Tiles &copy; Esri &mdash; Maxar, Earthstar Geographics, dan kontributor GIS",
+    maxNativeZoom: 18, // di atas level ini citra diperbesar, bukan menjadi kosong
+  },
+};
 
 // Bentuk detail (garis titik terluar) muncul saat zoom sudah naik sebanyak ini
 // dari tampilan seluruh Jawa Tengah. Makin kecil = detail muncul lebih cepat saat zoom in.
@@ -55,7 +71,11 @@ function DetailWatcher({ onChange }) {
 export default function MapContainer({ wilayahList = [], selectedWilayah, onSelectRegion }) {
   const [detail, setDetail] = useState(false);
 
+  const [mode, setMode] = useState("peta"); // "peta" | "satelit"
+  const tile = TILES[mode];
+
   return (
+    <div className="relative h-full w-full">
     <LeafletMap
       bounds={JATENG_BOUNDS}
       boundsOptions={FIT_OPTIONS}
@@ -67,8 +87,11 @@ export default function MapContainer({ wilayahList = [], selectedWilayah, onSele
       style={{ height: "100%", width: "100%", background: "#E9ECF6" }}
     >
       <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution="&copy; OpenStreetMap contributors"
+        key={mode}
+        url={tile.url}
+        attribution={tile.attribution}
+        maxZoom={19}
+        maxNativeZoom={tile.maxNativeZoom}
       />
       <JatengMask />
       <JatengView fit={!selectedWilayah} />
@@ -97,5 +120,32 @@ export default function MapContainer({ wilayahList = [], selectedWilayah, onSele
 
       {selectedWilayah?.bounds && <FlyToRegion bounds={selectedWilayah.bounds} />}
     </LeafletMap>
+
+         <div
+        role="group"
+        aria-label="Tampilan peta"
+        className="absolute bottom-3 left-3 z-[1000] flex gap-1 rounded-md bg-white p-1 shadow-lg ring-1 ring-black/10"
+      >
+        {[
+          { key: "peta", label: "Peta", Icon: MapIcon },
+          { key: "satelit", label: "Satelit", Icon: Satellite },
+        ].map(({ key, label, Icon }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setMode(key)}
+            aria-pressed={mode === key}
+            className={`flex min-h-10 items-center gap-2 rounded-sm px-4 py-2 text-sm font-semibold transition ${
+              mode === key
+                ? "bg-[#1a9fb8] text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+          </button>
+        ))}
+      </div>
+    </div>  
   );
 }

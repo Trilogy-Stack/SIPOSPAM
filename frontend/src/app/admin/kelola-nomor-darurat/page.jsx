@@ -218,7 +218,7 @@ const fetchList = async () => {
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-[#eceef7] font-sans pb-10">
-      <main className="w-[84%] mx-auto pt-5 space-y-4">
+      <main className="w-[calc(100%-3rem)] max-w-7xl mx-auto pt-5 space-y-4">
         {/* Judul */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">

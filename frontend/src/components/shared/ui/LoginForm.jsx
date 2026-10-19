@@ -10,7 +10,6 @@ export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -99,16 +98,8 @@ export default function LoginForm() {
           </div>
 
           {/* Remember Me & Forgot Password */}
-          <div className="flex items-center justify-between text-xs mt-1">
-            <label className="flex items-center gap-2 cursor-pointer text-gray-600">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="rounded border-gray-300 text-[#00a3c4] focus:ring-[#00a3c4]"
-              />
-              <span>Ingat saya</span>
-            </label>
+          <div className="flex items-center justify-end text-xs mt-1">
+        
             <a
               href="#"
               onClick={(e) => {
