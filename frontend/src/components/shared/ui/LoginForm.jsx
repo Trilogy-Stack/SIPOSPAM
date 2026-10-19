@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { getMe } from "@/lib/api";
@@ -109,16 +110,12 @@ export default function LoginForm() {
               />
               <span>Ingat saya</span>
             </label>
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                alert("Silakan hubungi administrator untuk reset password.");
-              }}
+            <Link
+              href="/lupa-password"
               className="text-[#00a3c4] font-medium hover:underline"
             >
               Lupa Password?
-            </a>
+            </Link>
           </div>
 
           {/* Alert Error */}
