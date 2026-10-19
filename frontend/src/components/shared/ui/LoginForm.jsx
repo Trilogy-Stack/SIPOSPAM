@@ -97,9 +97,7 @@ export default function LoginForm() {
           </div>
 
           {/*Forgot Password */}
-          <div className="flex items-center justify-between text-xs mt-1">
-            <label className="flex items-center gap-2 cursor-pointer text-gray-600">
-            </label>
+          <div className="flex items-center justify-end text-xs mt-1">
             <Link
               href="/lupa-password"
               className="text-[#00a3c4] font-medium hover:underline"
