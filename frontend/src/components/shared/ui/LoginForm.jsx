@@ -99,13 +99,6 @@ export default function LoginForm() {
           {/*Forgot Password */}
           <div className="flex items-center justify-between text-xs mt-1">
             <label className="flex items-center gap-2 cursor-pointer text-gray-600">
-              <input
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="rounded border-gray-300 text-[#00a3c4] focus:ring-[#00a3c4]"
-              />
-              <span>Ingat saya</span>
             </label>
             <Link
               href="/lupa-password"
