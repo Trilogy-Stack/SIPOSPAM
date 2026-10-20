@@ -4,35 +4,28 @@ import { useState, useEffect } from "react";
 import {
   MapPin,
   Phone,
-  // Navigation,
-  // MessageCircle,
   Locate,
   ChevronDown,
   ChevronUp,
   ChevronLeft,
   ChevronRight,
   X,
-  Bath,
-  Moon,
   Cross,
   ParkingCircle,
-  Coffee,
   Check,
   Search,
-  Toilet,
-  ToiletIcon,
   Park,
   Mosque,
+  Toilet,
 } from "lucide-react";
 import { getPospamsApi } from "@/lib/api";
 import OneTapCall from "../components/oneTapCall";
 import dynamic from "next/dynamic";
 import RegionSearch from "../components/regionSearch";
 
-// buat peta publik
 const PublikMap = dynamic(() => import("@/components/shared/map/PublikMap"), {
   ssr: false,
-  loading: () => <p className="text-xs text-blue-600">Memuat peta...</p>,
+  loading: () => <p className="text-xs text-blue-600 p-4">Memuat peta...</p>,
 });
 
 const DEFAULT_FACILITIES = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
@@ -130,9 +123,7 @@ export default function PospamPage() {
     currentIndex: 0,
   });
 
-  // LOGIKA FILTER & PENGURUTAN DATA POSPAM (Dideklarasikan 1x saja)
   const filterAndSortPospams = (dataList, selectedRegion, coords) => {
-    // KONDISI DEFAULT: Jika Wilayah BELUM dipilih dan GPS BELUM aktif -> KOSONGKAN DAFTAR
     if (!selectedRegion && !coords) {
       setPospams([]);
       return;
@@ -140,7 +131,6 @@ export default function PospamPage() {
 
     let filtered = [...dataList];
 
-    // Filter Fleksibel Berdasarkan Wilayah
     if (selectedRegion) {
       const target = selectedRegion.toLowerCase().trim();
       filtered = filtered.filter((item) => {
@@ -157,9 +147,7 @@ export default function PospamPage() {
       });
     }
 
-    // Pengurutan Data
     if (coords) {
-      // Jika GPS Aktif: Hitung & Urutkan dari yang Terdekat di Region Tersebut
       filtered = filtered
         .map((item) => ({
           ...item,
@@ -167,7 +155,6 @@ export default function PospamPage() {
         }))
         .sort((a, b) => (a.distance ?? Infinity) - (b.distance ?? Infinity));
     } else {
-      // Jika GPS Tidak Aktif: Urutkan Abjad (A-Z)
       filtered.sort((a, b) => a.name.localeCompare(b.name));
     }
 
@@ -205,7 +192,6 @@ export default function PospamPage() {
     filterAndSortPospams(allPospams, region, userCoords);
   }, [region, userCoords]);
 
-  // HANDLER AKTIFKAN LOKASI (Auto-detect & Paksa Ubah Dropdown Region ke Lokasi User)
   const handleAktifkanLokasi = () => {
     if (!navigator.geolocation) {
       alert("Browser Anda tidak mendukung Geolocation");
@@ -217,7 +203,6 @@ export default function PospamPage() {
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
 
-        // Cari Pospam dari seluruh DB yang paling dekat dengan GPS user
         let detectedRegion = "";
         let minDistance = Infinity;
 
@@ -231,7 +216,6 @@ export default function PospamPage() {
           }
         });
 
-        // Paksa reset & ubah dropdown region ke wilayah lokasi user (misal: "Kota Salatiga")
         if (detectedRegion) {
           setRegion(detectedRegion);
         }
@@ -246,7 +230,6 @@ export default function PospamPage() {
     );
   };
 
-  // HANDLER RESET LOKASI (Kembali ke State Awal Kosong)
   const handleResetLokasi = () => {
     setUserCoords(null);
     setRegion("");
@@ -268,242 +251,249 @@ export default function PospamPage() {
   };
 
   return (
-    <div className="p-4 space-y-4 pb-24 text-slate-800">
-      {/* Dropdown Filter Region */}
-      {/* Filter Region */}
-      <div>
-        <label className="text-xs font-semibold text-slate-600 mb-1 block">
-          Pospam Terdekat
-        </label>
-        <RegionSearch
-          value={region}
-          onChange={setRegion}
-          options={availableRegions}
-          placeholder="Cari Daerah / Kota"
-        />
-      </div>
-
-      {/* Peta Placeholder */}
-      {/* <div className="w-full h-44 bg-blue-100 rounded-2xl overflow-hidden relative flex items-center justify-center border border-blue-200">
-        <p className="text-xs text-blue-600 font-medium flex items-center gap-1">
-          <MapPin className="w-4 h-4" /> [Peta Leaflet: {allPospams.length} Total titik pospam]
-        </p>
-      </div> */}
-            {/* Peta */}
-      <div className="w-full h-72 bg-blue-100 rounded-2xl overflow-hidden relative isolate flex items-center justify-center border border-blue-200">
-        <PublikMap pospams={pospams.length ? pospams : allPospams} userCoords={userCoords} />
-      </div>
-
-      {/* Tombol Aktifkan Lokasi */}
-      <button
-        onClick={handleAktifkanLokasi}
-        disabled={isLoadingLoc}
-        className={`w-full text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-98 ${
-          userCoords
-            ? "bg-emerald-600 hover:bg-emerald-700"
-            : "bg-blue-600 hover:bg-blue-700"
-        }`}
-      >
-        <Locate className="w-4 h-4" />
-        {isLoadingLoc
-          ? "Mendeteksi Lokasi..."
-          : userCoords
-          ? "Perbarui Lokasi Saya"
-          : "Aktifkan Lokasi"}
-      </button>
-
-      {/* BADGE KOORDINAT + TOMBOL RESET (X) */}
-      {userCoords && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between shadow-sm animate-in fade-in duration-200">
-          <div className="flex flex-col text-left">
-            <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-xs">
-              <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Lokasi Anda Berhasil Terdeteksi</span>
-            </div>
-            <p className="text-[11px] font-mono text-emerald-600 mt-0.5">
-              Lat: <span className="font-bold">{userCoords.lat.toFixed(6)}</span> | Lng:{" "}
-              <span className="font-bold">{userCoords.lng.toFixed(6)}</span>
-            </p>
+    <div className="w-full pb-24 text-slate-800">
+      {/* GRID RESPONGIF: 1 Kolom di HP, 12 Kolom Split-Screen di Tablet & Laptop */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+        
+        {/* ================================================================= */}
+        {/* KOLOM KIRI (PETA): Tampil Sticky di Layar Tablet/Laptop           */}
+        {/* ================================================================= */}
+        <div className="md:col-span-6 lg:col-span-7 md:sticky md:top-6 order-1 md:order-1">
+          <div className="w-full h-72 md:h-[calc(100vh-7rem)] bg-blue-100 rounded-2xl overflow-hidden relative isolate flex items-center justify-center border border-blue-200 shadow-sm">
+            <PublikMap pospams={pospams.length ? pospams : allPospams} userCoords={userCoords} />
           </div>
-
-          <button
-            onClick={handleResetLokasi}
-            title="Hapus filter lokasi"
-            className="bg-emerald-200/80 hover:bg-emerald-300 text-emerald-800 p-1.5 rounded-full transition shrink-0 ml-2"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
-      )}
 
-      {/* Daftar Pospam */}
-      <div className="space-y-3 pt-2">
-        <h3 className="font-bold text-sm text-slate-800">Daftar Pospam</h3>
-
-        {/* PESAN STATE KOSONG */}
-        {pospams.length === 0 ? (
-          <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-8 text-center my-4 space-y-2">
-            <Search className="w-8 h-8 text-slate-400 mx-auto" />
-            <p className="text-xs font-medium text-slate-500 max-w-[220px] mx-auto leading-relaxed">
-              Cari berdasarkan wilayah atau aktifkan lokasi Anda
-            </p>
+        {/* ================================================================= */}
+        {/* KOLOM KANAN: Filter, Tombol GPS & Daftar Pospam                    */}
+        {/* ================================================================= */}
+        <div className="md:col-span-6 lg:col-span-5 space-y-4 order-2 md:order-2">
+          
+          {/* Filter Region Search */}
+          <div>
+            <label className="text-xs font-semibold text-slate-600 mb-1 block">
+              Pospam Terdekat
+            </label>
+            <RegionSearch
+              value={region}
+              onChange={setRegion}
+              options={availableRegions}
+              placeholder="Cari Daerah / Kota"
+            />
           </div>
-        ) : (
-          pospams.map((item) => {
-            const isExpanded = expandedId === item.id;
 
-            const availableDefaultFacilities = item.facilities.filter((f) =>
-              DEFAULT_FACILITIES.includes(f)
-            );
-            const otherFacilities = item.facilities.filter(
-              (f) => !DEFAULT_FACILITIES.includes(f)
-            );
+          {/* Tombol Aktifkan Lokasi */}
+          <button
+            onClick={handleAktifkanLokasi}
+            disabled={isLoadingLoc}
+            className={`w-full text-white py-3 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-98 ${
+              userCoords
+                ? "bg-emerald-600 hover:bg-emerald-700"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
+            <Locate className="w-4 h-4" />
+            {isLoadingLoc
+              ? "Mendeteksi Lokasi..."
+              : userCoords
+              ? "Perbarui Lokasi Saya"
+              : "Aktifkan Lokasi"}
+          </button>
 
-            return (
-              <div
-                key={item.id}
-                className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm transition-all"
-              >
-                <div
-                  onClick={() => setExpandedId(isExpanded ? null : item.id)}
-                  className="cursor-pointer select-none space-y-2"
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-base">{item.name}</h4>
-                      {item.distance != null && (
-                        <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full inline-block mt-1">
-                          ± {formatDistance(item.distance)} dari posisi Anda
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-slate-400 pt-1">
-                      {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                    </div>
-                  </div>
-
-                  {!isExpanded && availableDefaultFacilities.length > 0 && (
-                    <div className="flex items-center gap-2 pt-1">
-                      {availableDefaultFacilities.map((fac) => {
-                        const IconComp = FACILITY_ICON[fac] || Check;
-                        return (
-                          <div
-                            key={fac}
-                            title={fac}
-                            className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-600"
-                          >
-                            <IconComp className="w-4 h-4" />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+          {/* BADGE KOORDINAT + TOMBOL RESET (X) */}
+          {userCoords && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex items-center justify-between shadow-sm animate-in fade-in duration-200">
+              <div className="flex flex-col text-left">
+                <div className="flex items-center gap-1.5 text-emerald-700 font-semibold text-xs">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span>Lokasi Anda Berhasil Terdeteksi</span>
                 </div>
-
-                                <div
-                  inert={!isExpanded}
-                  className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
-                    isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                  }`}
-                >
-                  <div className="overflow-hidden">
-                    <div className="space-y-3 pt-3 border-t border-slate-100 mt-3">
-                      <div className="space-y-1.5 text-xs text-slate-600">
-                        <p className="flex items-start gap-2">
-                          <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                          {item.address || "Alamat belum diatur"}
-                        </p>
-                        <p className="flex items-center gap-2">
-                          <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                          {item.phone || "-"} {item.coordinator ? `(${item.coordinator})` : ""}
-                        </p>
-                      </div>
-
-                      {availableDefaultFacilities.length > 0 && (
-                        <div className="text-xs space-y-1.5 pt-1">
-                          <span className="font-semibold text-slate-700">Fasilitas Utama:</span>
-                          <div className="grid grid-cols-2 gap-2 text-slate-700 text-xs">
-                            {availableDefaultFacilities.map((fac) => {
-                              const IconComp = FACILITY_ICON[fac] || Check;
-                              return (
-                                <div key={fac} className="flex items-center gap-2">
-                                  <div className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-600 shrink-0">
-                                    <IconComp className="w-3.5 h-3.5" />
-                                  </div>
-                                  <span>{fac}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {otherFacilities.length > 0 && (
-                        <div className="text-xs space-y-1 pt-1">
-                          <span className="font-semibold text-slate-700">Fasilitas Lainnya:</span>
-                          <div className="grid grid-cols-2 gap-1 text-slate-500 text-[11px]">
-                            {otherFacilities.map((f, i) => (
-                              <div key={i}>• {f}</div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {item.photos && item.photos.length > 0 && (
-                        <div className="pt-2 space-y-1.5">
-                          <span className="font-semibold text-slate-700 text-xs block">
-                            Foto Lokasi:
-                          </span>
-                          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-                            {item.photos.map((url, idx) => (
-                              <div
-                                key={idx}
-                                onClick={() =>
-                                  setPreviewModal({
-                                    isOpen: true,
-                                    photos: item.photos,
-                                    currentIndex: idx,
-                                  })
-                                }
-                                className="w-20 h-20 shrink-0 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 cursor-pointer hover:opacity-90 active:scale-95 transition"
-                              >
-                                <img
-                                  src={url}
-                                  alt={`Foto ${item.name} ${idx + 1}`}
-                                  loading="lazy"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex gap-2 pt-2">
-                        <a
-                          href={`https://wa.me/${formatWaNumber(item.phone)}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-1 py-2 border border-emerald-500 text-emerald-600 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-emerald-50"
-                        >
-                          <img src="/icons/whatsapp-icon.png" alt="" className="w-4 h-4 object-contain" /> Kirim WhatsApp
-                        </a>
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-1 py-2 border border-blue-500 text-blue-600 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-blue-50"
-                        >
-                          <img src="/icons/google-maps.png" alt="" className="w-4 h-4 object-contain" /> Google Maps
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <p className="text-[11px] font-mono text-emerald-600 mt-0.5">
+                  Lat: <span className="font-bold">{userCoords.lat.toFixed(6)}</span> | Lng:{" "}
+                  <span className="font-bold">{userCoords.lng.toFixed(6)}</span>
+                </p>
               </div>
-            );
-          })
-        )}
+
+              <button
+                onClick={handleResetLokasi}
+                title="Hapus filter lokasi"
+                className="bg-emerald-200/80 hover:bg-emerald-300 text-emerald-800 p-1.5 rounded-full transition shrink-0 ml-2"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Daftar Pospam */}
+          <div className="space-y-3 pt-2">
+            <h3 className="font-bold text-sm text-slate-800">Daftar Pospam</h3>
+
+            {/* PESAN STATE KOSONG */}
+            {pospams.length === 0 ? (
+              <div className="bg-slate-50 border border-dashed border-slate-300 rounded-2xl p-8 text-center my-4 space-y-2">
+                <Search className="w-8 h-8 text-slate-400 mx-auto" />
+                <p className="text-xs font-medium text-slate-500 max-w-[220px] mx-auto leading-relaxed">
+                  Cari berdasarkan wilayah atau aktifkan lokasi Anda
+                </p>
+              </div>
+            ) : (
+              pospams.map((item) => {
+                const isExpanded = expandedId === item.id;
+
+                const availableDefaultFacilities = item.facilities.filter((f) =>
+                  DEFAULT_FACILITIES.includes(f)
+                );
+                const otherFacilities = item.facilities.filter(
+                  (f) => !DEFAULT_FACILITIES.includes(f)
+                );
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm transition-all"
+                  >
+                    <div
+                      onClick={() => setExpandedId(isExpanded ? null : item.id)}
+                      className="cursor-pointer select-none space-y-2"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-base">{item.name}</h4>
+                          {item.distance != null && (
+                            <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full inline-block mt-1">
+                              ± {formatDistance(item.distance)} dari posisi Anda
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-slate-400 pt-1">
+                          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        </div>
+                      </div>
+
+                      {!isExpanded && availableDefaultFacilities.length > 0 && (
+                        <div className="flex items-center gap-2 pt-1">
+                          {availableDefaultFacilities.map((fac) => {
+                            const IconComp = FACILITY_ICON[fac] || Check;
+                            return (
+                              <div
+                                key={fac}
+                                title={fac}
+                                className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 text-slate-600"
+                              >
+                                <IconComp className="w-4 h-4" />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      inert={!isExpanded ? "" : undefined}
+                      className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out motion-reduce:transition-none ${
+                        isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                      }`}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="space-y-3 pt-3 border-t border-slate-100 mt-3">
+                          <div className="space-y-1.5 text-xs text-slate-600">
+                            <p className="flex items-start gap-2">
+                              <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                              {item.address || "Alamat belum diatur"}
+                            </p>
+                            <p className="flex items-center gap-2">
+                              <Phone className="w-4 h-4 text-slate-400 shrink-0" />
+                              {item.phone || "-"} {item.coordinator ? `(${item.coordinator})` : ""}
+                            </p>
+                          </div>
+
+                          {availableDefaultFacilities.length > 0 && (
+                            <div className="text-xs space-y-1.5 pt-1">
+                              <span className="font-semibold text-slate-700">Fasilitas Utama:</span>
+                              <div className="grid grid-cols-2 gap-2 text-slate-700 text-xs">
+                                {availableDefaultFacilities.map((fac) => {
+                                  const IconComp = FACILITY_ICON[fac] || Check;
+                                  return (
+                                    <div key={fac} className="flex items-center gap-2">
+                                      <div className="flex items-center justify-center w-6 h-6 rounded-md bg-slate-100 text-slate-600 shrink-0">
+                                        <IconComp className="w-3.5 h-3.5" />
+                                      </div>
+                                      <span>{fac}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {otherFacilities.length > 0 && (
+                            <div className="text-xs space-y-1 pt-1">
+                              <span className="font-semibold text-slate-700">Fasilitas Lainnya:</span>
+                              <div className="grid grid-cols-2 gap-1 text-slate-500 text-[11px]">
+                                {otherFacilities.map((f, i) => (
+                                  <div key={i}>{f}</div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {item.photos && item.photos.length > 0 && (
+                            <div className="pt-2 space-y-1.5">
+                              <span className="font-semibold text-slate-700 text-xs block">
+                                Foto Lokasi:
+                              </span>
+                              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+                                {item.photos.map((url, idx) => (
+                                  <div
+                                    key={idx}
+                                    onClick={() =>
+                                      setPreviewModal({
+                                        isOpen: true,
+                                        photos: item.photos,
+                                        currentIndex: idx,
+                                      })
+                                    }
+                                    className="w-20 h-20 shrink-0 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 cursor-pointer hover:opacity-90 active:scale-95 transition"
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`Foto ${item.name} ${idx + 1}`}
+                                      loading="lazy"
+                                      className="w-full h-full object-cover"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex gap-2 pt-2">
+                            <a
+                              href={`https://wa.me/${formatWaNumber(item.phone)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex-1 py-2 border border-emerald-500 text-emerald-600 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-emerald-50"
+                            >
+                              <img src="/icons/whatsapp-icon.png" alt="" className="w-4 h-4 object-contain" /> Kirim WhatsApp
+                            </a>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="flex-1 py-2 border border-blue-500 text-blue-600 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-blue-50"
+                            >
+                              <img src="/icons/google-maps.png" alt="" className="w-4 h-4 object-contain" /> Google Maps
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
 
       {/* MODAL LIGHTBOX SLIDER FOTO */}
