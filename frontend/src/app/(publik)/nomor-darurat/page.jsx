@@ -284,7 +284,7 @@ export default function NomorDaruratPage() {
         <p className="text-xs text-slate-500 text-center py-6">Memuat...</p>
       ) : (
         nasional.length > 0 && (
-          <div className="grid grid-cols-3 gap-3 px-2 pt-2">
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
             {nasional.map((n) => (
               <button
                 type="button"
