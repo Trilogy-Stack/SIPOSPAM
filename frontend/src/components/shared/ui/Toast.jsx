@@ -53,7 +53,7 @@ export function useToast() {
 export function ToastContainer({ toasts, onDismiss }) {
   return (
     <div
-      className="fixed top-20 right-4 z-[10000] flex w-[calc(100%-2rem)] max-w-sm flex-col gap-2"
+      className="pointer-events-none fixed left-1/2 top-20 z-[10000] flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 flex-col gap-3"
       aria-live="polite"
     >
       {toasts.map(({ id, type, message }) => {
@@ -62,9 +62,9 @@ export function ToastContainer({ toasts, onDismiss }) {
           <div
             key={id}
             role={type === "error" ? "alert" : "status"}
-            className={`flex items-start gap-2.5 rounded-md border px-3.5 py-3 shadow-lg text-xs md:text-sm font-medium ${box}`}
+            className={`pointer-events-auto flex items-start gap-3 rounded-lg border px-5 py-4 shadow-xl text-sm md:text-base font-medium ${box}`}
           >
-            <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${icon}`} />
+            <Icon className={`mt-0.5 h-5 w-5 shrink-0 ${icon}`} />
             <p className="flex-1 break-words">{message}</p>
             <button
               type="button"
@@ -72,7 +72,7 @@ export function ToastContainer({ toasts, onDismiss }) {
               className="shrink-0 opacity-60 hover:opacity-100"
               aria-label="Tutup notifikasi"
             >
-              <X className="h-4 w-4" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         );

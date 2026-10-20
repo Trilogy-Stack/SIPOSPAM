@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import {
   Plus,
+  X,
   Siren,
   Fuel,
   Wrench,
@@ -304,9 +305,25 @@ const fetchList = async () => {
                 mode === "edit" ? "border border-slate-400 shadow-sm" : "shadow-sm"
               }`}
             >
-              <h2 className="text-sm md:text-base font-bold text-slate-800">
-                {mode === "add" ? "Tambah Nomor Darurat" : "Lihat & Edit Nomor Darurat"}
-              </h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm md:text-base font-bold text-slate-800">
+                                {mode === "add" ? "Tambah Nomor Darurat" : "Lihat & Edit Nomor Darurat"}
+                              </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (saving) return;
+                    setMode(null);
+                    setSelectedId(null);
+                  }}
+                  disabled={saving}
+                  aria-label="Tutup form"
+                  title="Tutup"
+                  className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
 
               <div>
                 <label className={labelClass}>Nama Instansi</label>
