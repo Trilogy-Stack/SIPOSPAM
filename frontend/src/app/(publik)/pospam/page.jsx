@@ -259,7 +259,7 @@ export default function PospamPage() {
         {/* KOLOM KIRI (PETA): Tampil Sticky di Layar Tablet/Laptop           */}
         {/* ================================================================= */}
         <div className="md:col-span-6 lg:col-span-7 md:sticky md:top-6 order-1 md:order-1">
-          <div className="w-full h-72 md:h-[calc(100vh-7rem)] bg-blue-100 rounded-2xl overflow-hidden relative isolate flex items-center justify-center border border-blue-200 shadow-sm">
+          <div className="w-full aspect-square max-h-[480px] bg-blue-100 rounded-2xl overflow-hidden relative isolate flex items-center justify-center border border-blue-200 shadow-sm">
             <PublikMap pospams={pospams.length ? pospams : allPospams} userCoords={userCoords} />
           </div>
         </div>
