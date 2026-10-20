@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUnsavedChanges, UNSAVED_MESSAGE } from "@/hooks/useUnsavedChanges";
 import Image from "next/image";
 import {
   Plus,
+  X,
   Siren,
   Fuel,
   Wrench,
@@ -111,7 +113,23 @@ const fetchList = async () => {
     setForm((f) => ({ ...f, category: f.category === cat ? "" : cat }));
 
   // ---------- Buka form ----------
+  // ---------- Peringatan perubahan belum disimpan ----------
+  const snapshot = () =>
+    JSON.stringify({
+      form,
+    });
+  const [baseline, setBaseline] = useState("");
+  useEffect(() => {
+    // Setelah form dibuka (tambah / edit), catat kondisi awalnya
+    setBaseline(mode ? snapshot() : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, selectedId]);
+  const dirty = !!mode && !!baseline && snapshot() !== baseline;
+  useUnsavedChanges(dirty);
+  const confirmLeaveForm = () => !dirty || window.confirm(UNSAVED_MESSAGE);
+
   const openAdd = () => {
+    if (!confirmLeaveForm()) return;
     setForm(emptyForm);
     setCurrentArea("");
     setSelectedId(null);
@@ -120,6 +138,7 @@ const fetchList = async () => {
   };
 
   const openEdit = (item) => {
+    if (!confirmLeaveForm()) return;
     setForm({
       name: item.agency_name || "",
       phone: item.telephone || "",
@@ -304,9 +323,25 @@ const fetchList = async () => {
                 mode === "edit" ? "border border-slate-400 shadow-sm" : "shadow-sm"
               }`}
             >
-              <h2 className="text-sm md:text-base font-bold text-slate-800">
-                {mode === "add" ? "Tambah Nomor Darurat" : "Lihat & Edit Nomor Darurat"}
-              </h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm md:text-base font-bold text-slate-800">
+                                {mode === "add" ? "Tambah Nomor Darurat" : "Lihat & Edit Nomor Darurat"}
+                              </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (saving || !confirmLeaveForm()) return;
+                    setMode(null);
+                    setSelectedId(null);
+                  }}
+                  disabled={saving}
+                  aria-label="Tutup form"
+                  title="Tutup"
+                  className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
 
               <div>
                 <label className={labelClass}>Nama Instansi</label>

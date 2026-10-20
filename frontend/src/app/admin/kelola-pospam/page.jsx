@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUnsavedChanges, UNSAVED_MESSAGE } from "@/hooks/useUnsavedChanges";
 import Image from "next/image"; // Tambahkan import Image
 import { Plus, Camera, Trash2, X } from "lucide-react";
 import RegionPicker, {
@@ -112,8 +113,26 @@ const fetchPospam = async () => {
 };
 
   const allFacilityNames = pospamList.flatMap((p) => p.facility || []);
+  // ---------- Peringatan perubahan belum disimpan ----------
+  const snapshot = () =>
+    JSON.stringify({
+      form,
+      photos: photos.map((p) => (p ? (p.file ? `baru:${p.file.name}:${p.file.size}` : p.url) : null)),
+      facilities,
+    });
+  const [baseline, setBaseline] = useState("");
+  useEffect(() => {
+    // Setelah form dibuka (tambah / edit), catat kondisi awalnya
+    setBaseline(mode ? snapshot() : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, selectedId]);
+  const dirty = !!mode && !!baseline && snapshot() !== baseline;
+  useUnsavedChanges(dirty);
+  const confirmLeaveForm = () => !dirty || window.confirm(UNSAVED_MESSAGE);
+
   // ---------- Buka form ----------
   const openAdd = () => {
+    if (!confirmLeaveForm()) return;
     cancelAddFacility();
     setForm(emptyForm);
     setCurrentArea("");
@@ -126,6 +145,7 @@ const fetchPospam = async () => {
   };
 
 const openEdit = (item) => {
+  if (!confirmLeaveForm()) return;
   cancelAddFacility();
   const itemFacilities = Array.isArray(item.facility) ? item.facility : [];
 
@@ -391,9 +411,26 @@ const handleDelete = async () => {
                 mode === "edit" ? "border border-slate-400 shadow-sm" : "shadow-sm"
               }`}
             >
-              <h2 className="text-sm md:text-base font-bold text-slate-800">
-                {mode === "add" ? "Tambah Pospam" : "Lihat & Edit Pospam"}
-              </h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm md:text-base font-bold text-slate-800">
+                                {mode === "add" ? "Tambah Pospam" : "Lihat & Edit Pospam"}
+                              </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (saving || !confirmLeaveForm()) return;
+                    cancelAddFacility();
+                    setMode(null);
+                    setSelectedId(null);
+                  }}
+                  disabled={saving}
+                  aria-label="Tutup form"
+                  title="Tutup"
+                  className="-mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-600 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
 
               <div>
                 <label className={labelClass}>Nama Pos</label>
