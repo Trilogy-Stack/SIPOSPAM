@@ -1,7 +1,8 @@
 // src/components/superadmin/AdminFormModal.jsx
 "use client";
-import { useEffect, useState } from "react";
-import Modal from "@/components/shared/ui/Modal";
+import { useEffect, useRef, useState } from "react";
+import Modal, { setUnsavedHandler } from "@/components/shared/ui/Modal";
+import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
 import PasswordInput from "@/components/shared/ui/PasswordInput";
 
 const labelClass = "mb-1.5 block text-sm font-medium text-gray-700";
@@ -16,6 +17,8 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const pendingRef = useRef(null); // aksi tertunda (mis. pindah menu) sampai pengguna memutuskan
 
   // Isi form saat dibuka: data admin kalau edit, kosong kalau tambah baru
   useEffect(() => {
@@ -26,8 +29,50 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
       setPassword("");
       setError("");
       setSaving(false);
+      setConfirmOpen(false);
+      pendingRef.current = null;
     }
   }, [open, initialData]);
+
+  // Ada isian yang berubah dibanding saat dialog dibuka?
+  const dirty =
+    name !== (initialData?.name ?? "") ||
+    region !== (initialData?.region ?? "") ||
+    email !== (initialData?.email ?? "") ||
+    password !== "";
+
+  // Selama ada perubahan, daftarkan penjaga: klik menu navbar akan minta konfirmasi dulu
+  useEffect(() => {
+    if (!open || !dirty || saving) return;
+    setUnsavedHandler((proceed) => {
+      pendingRef.current = proceed;
+      setConfirmOpen(true);
+    });
+    return () => setUnsavedHandler(null);
+  }, [open, dirty, saving]);
+
+  // Klik area luar / Batal / Esc
+  function requestClose() {
+    if (saving) return;
+    if (dirty) {
+      setConfirmOpen(true);
+      return;
+    }
+    onClose();
+  }
+
+  function keepEditing() {
+    pendingRef.current = null;
+    setConfirmOpen(false);
+  }
+
+  function discardChanges() {
+    const next = pendingRef.current;
+    pendingRef.current = null;
+    setConfirmOpen(false);
+    onClose();
+    next?.(); // lanjutkan pindah menu kalau sebelumnya ada yang tertunda
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -49,76 +94,104 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
   }
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? "Edit Akun Admin" : "Tambah Akun Admin"}>
-      <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
-        <div>
-          <label className={labelClass}>Nama Polres</label>
-          <input
-            required
-            name="nama-polres"
-            autoComplete="off"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Mis. Polres Demak"
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Wilayah</label>
-          <input
-            required
-            name="wilayah"
-            autoComplete="off"
-            value={region}
-            onChange={(e) => setRegion(e.target.value)}
-            placeholder="Mis. Kabupaten Demak"
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Email</label>
-          <input
-            type="email"
-            required
-            name="admin-email"
-            autoComplete="off"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Mis. polresdemak@gmail.com"
-            className={inputClass}
-          />
-        </div>
-
-        {/* Password hanya saat tambah baru: BE tidak menerima perubahan password lewat edit */}
-        {!isEdit && (
+    <>
+      <Modal
+        open={open}
+        // Esc diabaikan selagi dialog konfirmasi terbuka
+        onClose={confirmOpen ? undefined : requestClose}
+        title={isEdit ? "Edit Akun Admin" : "Tambah Akun Admin"}
+      >
+        <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
           <div>
-            <label className={labelClass}>Password</label>
-            <PasswordInput
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-              placeholder="************"
+            <label className={labelClass}>Nama Polres</label>
+            <input
+              required
+              name="nama-polres"
+              autoComplete="off"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Mis. Polres Demak"
+              className={inputClass}
             />
-            <p className="mt-1.5 text-xs text-gray-400">
-              Minimal 8 karakter. Admin diminta menggantinya saat login pertama.
-            </p>
           </div>
-        )}
-
-        {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-center text-xs text-red-600">
-            {error}
+          <div>
+            <label className={labelClass}>Wilayah</label>
+            <input
+              required
+              name="wilayah"
+              autoComplete="off"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              placeholder="Mis. Kabupaten Demak"
+              className={inputClass}
+            />
           </div>
-        )}
+          <div>
+            <label className={labelClass}>Email</label>
+            <input
+              type="email"
+              required
+              name="admin-email"
+              autoComplete="off"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Mis. polresdemak@gmail.com"
+              className={inputClass}
+            />
+          </div>
 
-        <button
-          type="submit"
-          disabled={saving}
-          className="mx-auto mt-3 rounded-md bg-[#0F5BBA] px-10 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0c4a99] disabled:opacity-50"
-        >
-          {saving ? "Menyimpan..." : "Simpan"}
-        </button>
-      </form>
-    </Modal>
+          {/* Password hanya saat tambah baru: BE tidak menerima perubahan password lewat edit */}
+          {!isEdit && (
+            <div>
+              <label className={labelClass}>Password</label>
+              <PasswordInput
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                placeholder="************"
+              />
+              <p className="mt-1.5 text-xs text-gray-400">
+                Minimal 8 karakter. Admin diminta menggantinya saat login pertama.
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-center text-xs text-red-600">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-3 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={requestClose}
+              disabled={saving}
+              className="min-w-[120px] rounded-md border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="min-w-[120px] rounded-md bg-[#0F5BBA] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0c4a99] disabled:opacity-50"
+            >
+              {saving ? "Menyimpan..." : "Simpan"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={open && confirmOpen}
+        onClose={keepEditing}
+        onConfirm={discardChanges}
+        title="Buang perubahan?"
+        confirmLabel="Buang perubahan"
+        cancelLabel="Lanjut mengedit"
+      >
+        Perubahan yang belum disimpan akan hilang.
+      </ConfirmDialog>
+    </>
   );
 }

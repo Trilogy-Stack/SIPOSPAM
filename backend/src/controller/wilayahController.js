@@ -1,6 +1,9 @@
 import { supabaseAdmin } from "../config/supabase.js";
 import { wrap } from "../utils/http.js";
 
+//#NA
+import { regionNonaktif } from "../utils/regionNonaktif.js";
+
 // Daftar wilayah (region) yang ada di sistem
 export const listWilayah = wrap(async (req, res) => {
   // Admin wilayah hanya melihat wilayahnya sendiri
@@ -11,7 +14,15 @@ export const listWilayah = wrap(async (req, res) => {
   const { data, error } = await supabaseAdmin.from("pospam").select("region");
   if (error) throw error;
 
-  const wilayahUnik = [...new Set(data.map((item) => item.region).filter(Boolean))].sort();
+  //#NA 
+  const nonaktif = await regionNonaktif();
+
+
+  // const wilayahUnik = [...new Set(data.map((item) => item.region).filter(Boolean))].sort();
+  const wilayahUnik = [ // ubah
+    ...new Set(data.map((item) => item.region).filter((r) => r && !nonaktif.includes(r))),
+  ].sort();
+
   res.json({ data: wilayahUnik });
 });
 
@@ -23,7 +34,14 @@ export const listDaerah = wrap(async (req, res) => {
 
   if (error) throw error;
 
-  const daerahUnik = [...new Set(data.map((item) => item.region).filter(Boolean))].sort();
+  // #NA
+  const nonaktif = await regionNonaktif();   // ← TAMBAH
+
+  // const daerahUnik = [...new Set(data.map((item) => item.region).filter(Boolean))].sort();
+  const daerahUnik = [
+    ...new Set(data.map((item) => item.region).filter((r) => r && !nonaktif.includes(r))),
+  ].sort();   // ← UBAH (menggantikan baris daerahUnik yang lama)
+
 
   res.json({ data: daerahUnik });
 });
@@ -42,10 +60,16 @@ export const rekapWilayah = wrap(async (req, res) => {
 
   if (errNomor) throw errNomor;
 
+  // #NA Sembunyikan data milik admin nonaktif   ← TAMBAH (3 baris)
+  const nonaktif = await regionNonaktif();
+  const pospamTampil = (pospamData ?? []).filter((i) => !nonaktif.includes(i.region));
+  const nomorTampil = (nomorData ?? []).filter((i) => !nonaktif.includes(i.region));
+
   // Kelompokkan dan hitung jumlah data per region
   const rekapMap = {};
 
-  pospamData?.forEach((item) => {
+  // pospamData?.forEach((item) => {
+  pospamTampil.forEach((item) => {  // #NA ← UBAH (menggantikan baris pospamData yang lama)
     if (!item.region) return;
     if (!rekapMap[item.region]) {
       rekapMap[item.region] = { region: item.region, jumlah_pospam: 0, jumlah_nomor_darurat: 0 };
@@ -53,7 +77,8 @@ export const rekapWilayah = wrap(async (req, res) => {
     rekapMap[item.region].jumlah_pospam += 1;
   });
 
-  nomorData?.forEach((item) => {
+  // nomorData?.forEach((item) => {
+  nomorTampil.forEach((item) => {  // #NA ← UBAH (menggantikan baris nomorData yang lama)
     if (!item.region) return;
     if (!rekapMap[item.region]) {
       rekapMap[item.region] = { region: item.region, jumlah_pospam: 0, jumlah_nomor_darurat: 0 };
@@ -63,9 +88,15 @@ export const rekapWilayah = wrap(async (req, res) => {
 
   const data = Object.values(rekapMap);
 
+  // const total = {
+  //   pospam: pospamData?.length || 0,
+  //   nomor_darurat: nomorData?.length || 0,
+  // };
+
+  // #NA ← UBAH (menggantikan baris total yang lama)
   const total = {
-    pospam: pospamData?.length || 0,
-    nomor_darurat: nomorData?.length || 0,
+    pospam: pospamTampil.length,
+    nomor_darurat: nomorTampil.length,
   };
 
   res.json({ data, total });

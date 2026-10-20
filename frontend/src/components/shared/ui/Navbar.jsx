@@ -2,15 +2,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import ProfileMenu from "./ProfileMenu";
 import ForcePasswordChange from "./ForcePasswordChange";
+import { hasUnsavedChanges, runWithUnsavedGuard } from "./Modal";
 
-function Logo({ title }) {
+function Logo({ title, onClick }) {
   return (
     <Link
       href="/"
+      onClick={onClick}
       aria-label={title}
       className="inline-flex shrink-0 flex-col items-stretch leading-none"
     >
@@ -41,7 +43,16 @@ function RoleBadge({ children }) {
 
 export default function Navbar({ title, items, badge }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Kalau ada form dengan perubahan belum tersimpan, tahan perpindahan dan minta konfirmasi dulu
+  function guardedClick(e, href) {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; // buka tab baru: biarkan
+    if (!hasUnsavedChanges()) return; // navigasi normal
+    e.preventDefault();
+    runWithUnsavedGuard(() => router.push(href));
+  }
 
   // Tutup menu mobile setiap pindah halaman
   useEffect(() => {
@@ -64,7 +75,7 @@ export default function Navbar({ title, items, badge }) {
       <div className="mx-auto flex w-full max-w-7xl items-center gap-4 py-3 lg:gap-6 xl:gap-8">
         {/* Logo + label peran */}
         <div className="flex shrink-0 items-center gap-3 lg:mr-2 xl:mr-6">
-          <Logo title={title} />
+          <Logo title={title} onClick={(e) => guardedClick(e, "/")} />
           {badge && <RoleBadge>{badge}</RoleBadge>}
         </div>
 
@@ -76,6 +87,7 @@ export default function Navbar({ title, items, badge }) {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={(e) => guardedClick(e, item.href)}
                 className={`shrink-0 text-base font-medium transition-colors ${
                   active ? "text-white" : "text-sky-300 hover:text-white"
                 }`}
@@ -114,7 +126,10 @@ export default function Navbar({ title, items, badge }) {
                   <Link
                     key={item.href}
                     href={item.href}
-                    onClick={() => setMenuOpen(false)}
+                    onClick={(e) => {
+                      guardedClick(e, item.href);
+                      setMenuOpen(false);
+                    }}
                     className={`block rounded-md px-3 py-2.5 text-base font-medium transition-colors ${
                       active
                         ? "bg-white/10 text-white"

@@ -22,9 +22,16 @@ export function buildWilayahList(rows = [], admins = []) {
     if (!namaByRegion.has(a.region) || a.is_active !== false) namaByRegion.set(a.region, a.name);
   }
 
+    // Region milik admin nonaktif disembunyikan (data tetap ada di database)
+  const inactiveRegions = new Set(
+    admins
+      .filter((a) => a.role !== "super_admin" && a.region && a.is_active === false)
+      .map((a) => a.region)
+  );
+
   const groups = new Map();
   for (const r of rows) {
-    if (!r.region) continue;
+    if (!r.region || inactiveRegions.has(r.region)) continue;
     const lat = Number(r.latitude);
     const lng = Number(r.longitude);
     const pospam = {

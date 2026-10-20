@@ -2,6 +2,9 @@ import { supabase, BUCKET_FOTO, supabaseAdmin } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 import { deteksiTipeGambar } from "../middleware/upload.js";
 
+// #NA
+import { regionNonaktif, kecualiRegion } from "../utils/regionNonaktif.js";
+
 // Helper verifikasi hak akses wilayah
 function pastikanAksesWilayah(reqUser, targetRegion) {
   if (reqUser.role !== "super_admin" && reqUser.region !== targetRegion) {
@@ -28,10 +31,15 @@ export const listPospam = wrap(async (req, res) => {
     .order("created_at", { ascending: false });
 
   if (region) query = query.eq("region", region);
+  
   if (q) {
     const aman = q.replace(/[,()%*\\]/g, " ");
     query = query.or(`name.ilike.%${aman}%,location.ilike.%${aman}%`);
   }
+
+  // #NA Sembunyikan pospam milik admin nonaktif
+  const nonaktif = await regionNonaktif();
+  query = kecualiRegion(query, nonaktif);
 
   const dari = (page - 1) * limit;
   const { data, error, count } = await query.range(dari, dari + limit - 1);
@@ -54,6 +62,10 @@ export const petaPospam = wrap(async (req, res) => {
 
   if (region) query = query.eq("region", region);
 
+  // #NA Sembunyikan pospam milik admin nonaktif
+  const nonaktif = await regionNonaktif();
+  query = kecualiRegion(query, nonaktif);
+
   const { data, error } = await query;
   if (error) throw error;
 
@@ -72,6 +84,11 @@ export const getPospam = wrap(async (req, res) => {
 
   if (error) throw error;
   if (!data) throw new HttpError(404, "Pospam tidak ditemukan");
+
+// #NA Pospam milik admin nonaktif dianggap tidak ada
+  if ((await regionNonaktif()).includes(data.region)) {
+    throw new HttpError(404, "Pospam tidak ditemukan");
+  }
 
   res.json({ data });
 });

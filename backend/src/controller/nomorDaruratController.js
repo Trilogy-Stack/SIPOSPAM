@@ -1,6 +1,9 @@
 import supabase, { supabaseAdmin } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 
+// #NA
+import { regionNonaktif, kecualiRegion } from "../utils/regionNonaktif.js";
+
 // Helper verifikasi hak akses wilayah
 function pastikanAksesWilayah(reqUser, targetRegion) {
   if (reqUser.role !== "super_admin" && reqUser.region !== targetRegion) {
@@ -27,6 +30,10 @@ export const listNomorDarurat = wrap(async (req, res) => {
     const aman = q.replace(/[,()%*\\]/g, " ");
     query = query.or(`agency_name.ilike.%${aman}%,telephone.ilike.%${aman}%`);
   }
+
+  // #NA Sembunyikan nomor darurat milik admin nonaktif  ← TAMBAH (3 baris)
+  const nonaktif = await regionNonaktif();
+  query = kecualiRegion(query, nonaktif);
 
   const dari = (page - 1) * limit;
   const { data, error, count } = await query.range(dari, dari + limit - 1);
