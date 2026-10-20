@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUnsavedChanges, UNSAVED_MESSAGE } from "@/hooks/useUnsavedChanges";
 import Image from "next/image"; // Tambahkan import Image
 import { Plus, Camera, Trash2, X } from "lucide-react";
 import RegionPicker, {
@@ -112,8 +113,26 @@ const fetchPospam = async () => {
 };
 
   const allFacilityNames = pospamList.flatMap((p) => p.facility || []);
+  // ---------- Peringatan perubahan belum disimpan ----------
+  const snapshot = () =>
+    JSON.stringify({
+      form,
+      photos: photos.map((p) => (p ? (p.file ? `baru:${p.file.name}:${p.file.size}` : p.url) : null)),
+      facilities,
+    });
+  const [baseline, setBaseline] = useState("");
+  useEffect(() => {
+    // Setelah form dibuka (tambah / edit), catat kondisi awalnya
+    setBaseline(mode ? snapshot() : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, selectedId]);
+  const dirty = !!mode && !!baseline && snapshot() !== baseline;
+  useUnsavedChanges(dirty);
+  const confirmLeaveForm = () => !dirty || window.confirm(UNSAVED_MESSAGE);
+
   // ---------- Buka form ----------
   const openAdd = () => {
+    if (!confirmLeaveForm()) return;
     cancelAddFacility();
     setForm(emptyForm);
     setCurrentArea("");
@@ -126,6 +145,7 @@ const fetchPospam = async () => {
   };
 
 const openEdit = (item) => {
+  if (!confirmLeaveForm()) return;
   cancelAddFacility();
   const itemFacilities = Array.isArray(item.facility) ? item.facility : [];
 
@@ -398,7 +418,7 @@ const handleDelete = async () => {
                 <button
                   type="button"
                   onClick={() => {
-                    if (saving) return;
+                    if (saving || !confirmLeaveForm()) return;
                     cancelAddFacility();
                     setMode(null);
                     setSelectedId(null);

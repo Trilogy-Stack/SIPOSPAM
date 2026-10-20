@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUnsavedChanges, UNSAVED_MESSAGE } from "@/hooks/useUnsavedChanges";
 import Image from "next/image";
 import {
   Plus,
@@ -112,7 +113,23 @@ const fetchList = async () => {
     setForm((f) => ({ ...f, category: f.category === cat ? "" : cat }));
 
   // ---------- Buka form ----------
+  // ---------- Peringatan perubahan belum disimpan ----------
+  const snapshot = () =>
+    JSON.stringify({
+      form,
+    });
+  const [baseline, setBaseline] = useState("");
+  useEffect(() => {
+    // Setelah form dibuka (tambah / edit), catat kondisi awalnya
+    setBaseline(mode ? snapshot() : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, selectedId]);
+  const dirty = !!mode && !!baseline && snapshot() !== baseline;
+  useUnsavedChanges(dirty);
+  const confirmLeaveForm = () => !dirty || window.confirm(UNSAVED_MESSAGE);
+
   const openAdd = () => {
+    if (!confirmLeaveForm()) return;
     setForm(emptyForm);
     setCurrentArea("");
     setSelectedId(null);
@@ -121,6 +138,7 @@ const fetchList = async () => {
   };
 
   const openEdit = (item) => {
+    if (!confirmLeaveForm()) return;
     setForm({
       name: item.agency_name || "",
       phone: item.telephone || "",
@@ -312,7 +330,7 @@ const fetchList = async () => {
                 <button
                   type="button"
                   onClick={() => {
-                    if (saving) return;
+                    if (saving || !confirmLeaveForm()) return;
                     setMode(null);
                     setSelectedId(null);
                   }}
