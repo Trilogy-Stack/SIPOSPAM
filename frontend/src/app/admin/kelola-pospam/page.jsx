@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUnsavedChanges, UNSAVED_MESSAGE } from "@/hooks/useUnsavedChanges";
-import Image from "next/image"; // Tambahkan import Image
+import Image from "next/image";
 import { Plus, Camera, Trash2, X } from "lucide-react";
 import RegionPicker, {
   EMPTY_REGION,
@@ -10,17 +9,17 @@ import RegionPicker, {
   regionToQueries,
   parseRegion,
 } from "@/components/admin/RegionPicker";
+import MapPicker from "@/components/admin/MapPicker";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import {
-  getPospamsApi, 
+  getPospamsApi,
   createPospam,
-  updatePospam, 
+  updatePospam,
   deletePospam,
   uploadFotoPospam,
-
 } from "@/lib/api";
-import MapPicker from "@/components/admin/MapPicker";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnsavedChanges, UNSAVED_MESSAGE } from "@/hooks/useUnsavedChanges";
 import { getRegionScope } from "@/lib/regionScope";
 import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
 
@@ -45,12 +44,21 @@ const buildOptions = (extra = []) => [
     .map((name) => ({ name, custom: true })),
 ];
 
+const inputClass =
+  "w-full border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
+const labelClass = "block text-xs md:text-sm text-slate-600 font-medium mb-1.5";
+
 export default function KelolaPospamPage() {
+  const { profile } = useAuth();
+  const { toasts, toast, dismiss } = useToast();
+
   const [pospamList, setPospamList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
   const [mode, setMode] = useState(null); // null | "add" | "edit"
   const [selectedId, setSelectedId] = useState(null);
   const [currentArea, setCurrentArea] = useState("");
+  const [pickedRegion, setPickedRegion] = useState(null); // wilayah yang dipilih admin sendiri
 
   const [form, setForm] = useState(emptyForm);
   const [photos, setPhotos] = useState([]); // { url, file } | null
@@ -59,60 +67,20 @@ export default function KelolaPospamPage() {
   const [addingFacility, setAddingFacility] = useState(false);
   const [newFacility, setNewFacility] = useState("");
   const [facilityError, setFacilityError] = useState("");
-
-  const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [facilityToDelete, setFacilityToDelete] = useState(null);
 
-// Berapa pospam LAIN yang memakai fasilitas ini
-const facilityUsedByOthers = (name) =>
-  pospamList.filter(
-    (p) => p.id !== selectedId && (p.facility || []).includes(name)
-  ).length;
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [baseline, setBaseline] = useState("");
 
-  const { toasts, toast, dismiss } = useToast();
-
-  const [pickedRegion, setPickedRegion] = useState(null); // wilayah yang dipilih admin sendiri
   const focus = regionToQueries(pickedRegion);
-
-  const { profile } = useAuth();
-
-  useEffect(() => {
-  fetchPospam();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [profile?.role, profile?.region]);
-
-// Tambahkan state error di dalam komponen KelolaPospamPage
-const [errorMessage, setErrorMessage] = useState("");
-
-const fetchPospam = async () => {
-  const scope = getRegionScope(profile);
-  if (!scope.ready) return; // tunggu profil selesai dimuat
-
-  if (scope.blocked) {
-    setPospamList([]);
-    setErrorMessage("Akun Anda belum memiliki wilayah. Hubungi super admin.");
-    setLoading(false);
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setErrorMessage("");
-    const response = await getPospamsApi(scope.params);
-    const data = Array.isArray(response) ? response : response.data || [];
-    setPospamList(data);
-  } catch (error) {
-    console.error("Gagal mengambil data Pospam:", error);
-    setErrorMessage(error.message || "Gagal memuat data.");
-    setPospamList([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
+  const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   const allFacilityNames = pospamList.flatMap((p) => p.facility || []);
+
+  // Jumlah pospam LAIN yang memakai fasilitas ini
+  const facilityUsedByOthers = (name) =>
+    pospamList.filter((p) => p.id !== selectedId && (p.facility || []).includes(name)).length;
+
   // ---------- Peringatan perubahan belum disimpan ----------
   const snapshot = () =>
     JSON.stringify({
@@ -120,64 +88,47 @@ const fetchPospam = async () => {
       photos: photos.map((p) => (p ? (p.file ? `baru:${p.file.name}:${p.file.size}` : p.url) : null)),
       facilities,
     });
-  const [baseline, setBaseline] = useState("");
-  useEffect(() => {
-    // Setelah form dibuka (tambah / edit), catat kondisi awalnya
-    setBaseline(mode ? snapshot() : "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, selectedId]);
   const dirty = !!mode && !!baseline && snapshot() !== baseline;
+
   useUnsavedChanges(dirty);
   const confirmLeaveForm = () => !dirty || window.confirm(UNSAVED_MESSAGE);
 
-  // ---------- Buka form ----------
-  const openAdd = () => {
-    if (!confirmLeaveForm()) return;
-    cancelAddFacility();
-    setForm(emptyForm);
-    setCurrentArea("");
-    setPhotos([null]); 
-    setFacilities([]);
-    setFacilityOptions(buildOptions(allFacilityNames));
-    setSelectedId(null);
-    setMode("add");
-    setPickedRegion(null);
+  // Catat kondisi awal setiap form dibuka atau ditutup
+  useEffect(() => {
+    setBaseline(mode ? snapshot() : "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, selectedId]);
+
+  // ---------- Data ----------
+  const fetchPospam = async () => {
+    const scope = getRegionScope(profile);
+    if (!scope.ready) return; // tunggu profil selesai dimuat
+
+    if (scope.blocked) {
+      setPospamList([]);
+      setErrorMessage("Akun Anda belum memiliki wilayah. Hubungi super admin.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setErrorMessage("");
+      const response = await getPospamsApi(scope.params);
+      setPospamList(Array.isArray(response) ? response : response.data || []);
+    } catch (error) {
+      console.error("Gagal mengambil data Pospam:", error);
+      setErrorMessage(error.message || "Gagal memuat data.");
+      setPospamList([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-const openEdit = (item) => {
-  if (!confirmLeaveForm()) return;
-  cancelAddFacility();
-  const itemFacilities = Array.isArray(item.facility) ? item.facility : [];
-
-  setForm({
-    name: item.name || "",
-    coordinator: item.koor_name || "",
-    coordinatorPhone: item.koor_phone || "",
-    region: parseRegion(item.area),
-    street: item.location || "",
-    lat: item.latitude ?? null,
-    lng: item.longitude ?? null,
-  });
-  setPickedRegion(null);
-  setCurrentArea(item.area || item.region || ""); // state baru, lihat di bawah
-
-  setPhotos(Array.isArray(item.photo) ? item.photo.map((url) => ({ url, file: null })) : []);
-  setFacilities(itemFacilities);
-  setFacilityOptions(buildOptions([...allFacilityNames, ...itemFacilities]));
-  setSelectedId(item.id);
-  setMode("edit");
-};
-
-  // ---------- Foto ----------
-  const setPhoto = (index, file) => {
-    if (!file) return;
-    setPhotos((prev) =>
-      prev.map((p, i) => (i === index ? { url: URL.createObjectURL(file), file } : p))
-    );
-  };
-  const removePhoto = (index) =>
-    setPhotos((prev) => prev.map((p, i) => (i === index ? null : p)));
-  const addPhotoSlot = () => setPhotos((prev) => [...prev, null]);
+  useEffect(() => {
+    fetchPospam();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.role, profile?.region]);
 
   // ---------- Fasilitas ----------
   const toggleFacility = (name) =>
@@ -204,136 +155,189 @@ const openEdit = (item) => {
   };
 
   const confirmRemoveFacility = async () => {
-  const name = facilityToDelete;
-  if (!name) return;
-  setFacilityToDelete(null);
-  setSaving(true);
+    const name = facilityToDelete;
+    if (!name) return;
+    setFacilityToDelete(null);
+    setSaving(true);
 
-  try {
-    // Pospam lain yang memakai fasilitas ini
-    const affected = pospamList.filter(
-      (p) => p.id !== selectedId && (p.facility || []).includes(name)
+    try {
+      // Pospam lain yang memakai fasilitas ini ikut dibersihkan
+      const affected = pospamList.filter(
+        (p) => p.id !== selectedId && (p.facility || []).includes(name)
+      );
+
+      await Promise.all(
+        affected.map((p) =>
+          updatePospam(p.id, { facility: (p.facility || []).filter((f) => f !== name) })
+        )
+      );
+
+      setFacilityOptions((prev) => prev.filter((o) => o.name !== name));
+      setFacilities((prev) => prev.filter((f) => f !== name));
+      if (affected.length) await fetchPospam();
+
+      toast.success(
+        affected.length
+          ? `Fasilitas "${name}" dihapus dari ${affected.length} pospam lain.`
+          : `Fasilitas "${name}" dihapus dari pilihan.`
+      );
+    } catch (error) {
+      console.error("Gagal menghapus fasilitas:", error);
+      toast.error(`Gagal menghapus fasilitas: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ---------- Foto ----------
+  const setPhoto = (index, file) => {
+    if (!file) return;
+    setPhotos((prev) =>
+      prev.map((p, i) => (i === index ? { url: URL.createObjectURL(file), file } : p))
     );
+  };
+  const removePhoto = (index) =>
+    setPhotos((prev) => prev.map((p, i) => (i === index ? null : p)));
+  const addPhotoSlot = () => setPhotos((prev) => [...prev, null]);
 
-    await Promise.all(
-      affected.map((p) =>
-        updatePospam(p.id, {
-          facility: (p.facility || []).filter((f) => f !== name),
-        })
-      )
-    );
+  // ---------- Form ----------
+  const closeForm = () => {
+    setMode(null);
+    setSelectedId(null);
+  };
 
-    setFacilityOptions((prev) => prev.filter((o) => o.name !== name));
-    setFacilities((prev) => prev.filter((f) => f !== name));
-    if (affected.length) await fetchPospam();
+  const openAdd = () => {
+    if (!confirmLeaveForm()) return;
+    cancelAddFacility();
+    setForm(emptyForm);
+    setCurrentArea("");
+    setPhotos([null]);
+    setFacilities([]);
+    setFacilityOptions(buildOptions(allFacilityNames));
+    setSelectedId(null);
+    setMode("add");
+    setPickedRegion(null);
+  };
 
-    toast.success(
-      affected.length
-        ? `Fasilitas "${name}" dihapus dari ${affected.length} pospam lain.`
-        : `Fasilitas "${name}" dihapus dari pilihan.`
-    );
-  } catch (error) {
-    console.error("Gagal menghapus fasilitas:", error);
-    toast.error(`Gagal menghapus fasilitas: ${error.message}`);
-  } finally {
-    setSaving(false);
-  }
-};
+  const openEdit = (item) => {
+    if (!confirmLeaveForm()) return;
+    cancelAddFacility();
+    const itemFacilities = Array.isArray(item.facility) ? item.facility : [];
+
+    setForm({
+      name: item.name || "",
+      coordinator: item.koor_name || "",
+      coordinatorPhone: item.koor_phone || "",
+      region: parseRegion(item.area),
+      street: item.location || "",
+      lat: item.latitude ?? null,
+      lng: item.longitude ?? null,
+    });
+    setPickedRegion(null);
+    setCurrentArea(item.area || item.region || "");
+    setPhotos(Array.isArray(item.photo) ? item.photo.map((url) => ({ url, file: null })) : []);
+    setFacilities(itemFacilities);
+    setFacilityOptions(buildOptions([...allFacilityNames, ...itemFacilities]));
+    setSelectedId(item.id);
+    setMode("edit");
+  };
 
   // ---------- Simpan & Hapus ----------
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (saving) return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (saving) return;
 
-  if (form.coordinatorPhone.length < 10) {
-    toast.warning("Nomor kontak kordinator minimal 10 angka.");
-    return;
-  }
-
-  // Validasi lokasi dilakukan SEBELUM upload foto agar tidak ada upload yang sia-sia
-  if (form.lat == null || form.lng == null) {
-    toast.warning("Tentukan lokasi pospam pada peta (klik peta atau geser pin).");
-    return;
-  }
-
-  setSaving(true);
-  try {
-    const photo = await Promise.all(
-      photos.filter(Boolean).map((p) => (p.file ? uploadFotoPospam(p.file) : p.url))
-    );
-
-    const areaStr = formatRegion(form.region); // kosong jika belum dipilih
-
-    const payload = {
-      name: form.name,
-      koor_name: form.coordinator,
-      koor_phone: form.coordinatorPhone,
-      location: form.street,
-      latitude: Number(form.lat),
-      longitude: Number(form.lng),
-      facility: facilities,
-      photo,
-      ...(areaStr ? { area: areaStr } : {}),
-    };
-
-    if (mode === "add") {
-      // region wajib lolos validasi; untuk admin_wilayah akan ditimpa BE dari akun login
-      await createPospam({ ...payload, region: areaStr || "-" });
-    } else {
-      await updatePospam(selectedId, payload); // region sengaja tidak dikirim
+    if (form.coordinatorPhone.length < 10) {
+      toast.warning("Nomor kontak kordinator minimal 10 angka.");
+      return;
     }
 
-    const wasAdd = mode === "add";
-    await fetchPospam();
-    setMode(null);
-    setSelectedId(null);
-    toast.success(wasAdd ? "Pospam berhasil ditambahkan." : "Pospam berhasil diperbarui.");
-  } catch (error) {
-    console.error("Gagal menyimpan Pospam:", error);
-    toast.error(`Gagal menyimpan: ${error.message}`);
-  } finally {
-    setSaving(false);
-  }
-};
+    // Lokasi divalidasi sebelum upload foto agar tidak ada upload yang sia-sia
+    if (form.lat == null || form.lng == null) {
+      toast.warning("Tentukan lokasi pospam pada peta (klik peta atau geser pin).");
+      return;
+    }
 
-const handleDelete = async () => {
-  if (!selectedId) return;
-  setSaving(true);
-  try {
-    await deletePospam(selectedId);
-    await fetchPospam();
-    setMode(null);
-    setSelectedId(null);
-    toast.success("Pospam berhasil dihapus.");
-  } catch (error) {
-    console.error("Gagal menghapus Pospam:", error);
-    toast.error(`Gagal menghapus: ${error.message}`);
-  } finally {
-    setSaving(false);
-  }
-};
+    setSaving(true);
+    try {
+      const photo = await Promise.all(
+        photos.filter(Boolean).map((p) => (p.file ? uploadFotoPospam(p.file) : p.url))
+      );
 
-  const inputClass =
-    "w-full border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
-  const labelClass = "block text-xs md:text-sm text-slate-600 font-medium mb-1.5";
+      const areaStr = formatRegion(form.region);
+
+      const payload = {
+        name: form.name,
+        koor_name: form.coordinator,
+        koor_phone: form.coordinatorPhone,
+        location: form.street,
+        latitude: Number(form.lat),
+        longitude: Number(form.lng),
+        facility: facilities,
+        photo,
+        ...(areaStr ? { area: areaStr } : {}),
+      };
+
+      if (mode === "add") {
+        // region wajib lolos validasi; untuk admin_wilayah akan ditimpa backend dari akun login
+        await createPospam({ ...payload, region: areaStr || "-" });
+      } else {
+        await updatePospam(selectedId, payload); // region sengaja tidak dikirim
+      }
+
+      const wasAdd = mode === "add";
+      await fetchPospam();
+      closeForm();
+      toast.success(wasAdd ? "Pospam berhasil ditambahkan." : "Pospam berhasil diperbarui.");
+    } catch (error) {
+      console.error("Gagal menyimpan Pospam:", error);
+      toast.error(`Gagal menyimpan: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedId) return;
+    setSaving(true);
+    try {
+      await deletePospam(selectedId);
+      await fetchPospam();
+      closeForm();
+      toast.success("Pospam berhasil dihapus.");
+    } catch (error) {
+      console.error("Gagal menghapus Pospam:", error);
+      toast.error(`Gagal menghapus: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const facilityDeleteMessage = () => {
+    if (!facilityToDelete) return "";
+    const used = facilityUsedByOthers(facilityToDelete);
+    return used > 0
+      ? `Fasilitas "${facilityToDelete}" dipakai ${used} pospam lain. Hapus dari semua pospam?`
+      : `Hapus fasilitas "${facilityToDelete}" dari pilihan?`;
+  };
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-[#eceef7] font-sans pb-10">
       <main className="w-[calc(100%-3rem)] max-w-7xl mx-auto pt-5 space-y-4">
-        {/* Judul */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            {/* Ganti icon MapPin dengan Image at-icons_location.png */}
             <div className="w-17 h-17 relative shrink-0">
-                <Image 
-                    src="/icons_location.png" 
-                    alt="Location Icon"
-                    fill
-                    className="object-contain"
-                    />
+              <Image
+                src="/icons_location.png"
+                alt="Location Icon"
+                fill
+                className="object-contain"
+              />
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">Kelola Pospam</h1>
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">
+                Kelola Pospam
+              </h1>
               <p className="text-xs md:text-sm text-slate-600 font-medium mt-0.5">
                 Kelola data, lokasi, dan fasilitas Pos Pengamanan pada wilayah Anda.
               </p>
@@ -349,7 +353,7 @@ const handleDelete = async () => {
         </div>
 
         <div className={mode ? "grid grid-cols-1 lg:grid-cols-2 gap-5 items-start" : ""}>
-          {/* Daftar Nomor Darurat */}
+          {/* Daftar */}
           <div className="space-y-3">
             {loading && (
               <div className="py-45 text-center">
@@ -362,20 +366,24 @@ const handleDelete = async () => {
               </div>
             )}
             {!loading && !errorMessage && pospamList.length === 0 && (
-                <div className="py-45 text-center">
-                  <p className="text-base md:text-lg font-semibold text-slate-600">Belum ada data pospam</p>
-                  <p className="text-xs md:text-sm text-slate-500 mt-1">
-                    Klik tombol "Tambah Pospam" untuk menambahkan data pertama.
-                  </p>
-                </div>
-              )}
+              <div className="py-45 text-center">
+                <p className="text-base md:text-lg font-semibold text-slate-600">
+                  Belum ada data pospam
+                </p>
+                <p className="text-xs md:text-sm text-slate-500 mt-1">
+                  Klik tombol "Tambah Pospam" untuk menambahkan data pertama.
+                </p>
+              </div>
+            )}
 
             {pospamList.map((item, index) => (
               <div
                 key={item.id}
                 onClick={() => openEdit(item)}
                 className={`bg-white rounded-md shadow flex overflow-hidden cursor-pointer border-2 transition ${
-                  selectedId === item.id ? "border-[#2563eb]" : "border-transparent hover:border-slate-200"
+                  selectedId === item.id
+                    ? "border-[#2563eb]"
+                    : "border-transparent hover:border-slate-200"
                 }`}
               >
                 <div className="bg-[#1a9fb8] text-white font-bold text-sm w-12 flex items-center justify-center shrink-0">
@@ -387,13 +395,15 @@ const handleDelete = async () => {
                     <span className="text-xs font-normal text-slate-600">({item.koor_phone})</span>
                   </h3>
                   <p className="text-xs md:text-sm text-slate-700">
-                    {item.location}{item.area ? `, ${item.area}` : ""}
+                    {item.location}
+                    {item.area ? `, ${item.area}` : ""}
                   </p>
                   <div className="flex flex-wrap gap-2 pt-1">
                     {(item.facility || []).map((f) => (
                       <span
                         key={f}
-                        className="border border-slate-400 rounded px-2.5 py-0.5 text-[11px] md:text-xs text-slate-700">
+                        className="border border-slate-400 rounded px-2.5 py-0.5 text-[11px] md:text-xs text-slate-700"
+                      >
                         {f}
                       </span>
                     ))}
@@ -413,15 +423,14 @@ const handleDelete = async () => {
             >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm md:text-base font-bold text-slate-800">
-                                {mode === "add" ? "Tambah Pospam" : "Lihat & Edit Pospam"}
-                              </h2>
+                  {mode === "add" ? "Tambah Pospam" : "Lihat & Edit Pospam"}
+                </h2>
                 <button
                   type="button"
                   onClick={() => {
                     if (saving || !confirmLeaveForm()) return;
                     cancelAddFacility();
-                    setMode(null);
-                    setSelectedId(null);
+                    closeForm();
                   }}
                   disabled={saving}
                   aria-label="Tutup form"
@@ -434,12 +443,24 @@ const handleDelete = async () => {
 
               <div>
                 <label className={labelClass}>Nama Pos</label>
-                <input className={inputClass} placeholder="Pospam Simpang Pasar Sapi" value={form.name} onChange={setField("name")} required />
+                <input
+                  className={inputClass}
+                  placeholder="Pospam Simpang Pasar Sapi"
+                  value={form.name}
+                  onChange={setField("name")}
+                  required
+                />
               </div>
 
               <div>
                 <label className={labelClass}>Nama Kordinator</label>
-                <input className={inputClass} placeholder="Andreas" value={form.coordinator} onChange={setField("coordinator")} required />
+                <input
+                  className={inputClass}
+                  placeholder="Andreas"
+                  value={form.coordinator}
+                  onChange={setField("coordinator")}
+                  required
+                />
               </div>
 
               <div>
@@ -481,10 +502,15 @@ const handleDelete = async () => {
 
               <div>
                 <label className={labelClass}>Nama Jalan / Titik KM / Patokan</label>
-                <input className={inputClass} placeholder="Simpang utama Pasar Sapi" value={form.street} onChange={setField("street")} required />
+                <input
+                  className={inputClass}
+                  placeholder="Simpang utama Pasar Sapi"
+                  value={form.street}
+                  onChange={setField("street")}
+                  required
+                />
               </div>
 
-              {/* Peta */}
               <div>
                 <label className={labelClass}>Titik Lokasi di Peta</label>
                 <MapPicker
@@ -496,13 +522,16 @@ const handleDelete = async () => {
                   focusFallback={focus.fallback}
                 />
               </div>
-              {/* Foto Fasilitas */}
+
               <div>
                 <label className={labelClass}>Foto Fasilitas</label>
                 <div className="flex flex-wrap gap-2">
                   {photos.map((p, i) =>
                     p ? (
-                      <div key={i} className="relative w-[72px] h-[72px] rounded-md overflow-hidden border border-slate-200">
+                      <div
+                        key={i}
+                        className="relative w-[72px] h-[72px] rounded-md overflow-hidden border border-slate-200"
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={p.url} alt="" className="w-full h-full object-cover" />
                         <button
@@ -539,13 +568,9 @@ const handleDelete = async () => {
                 </div>
               </div>
 
-              {/* Fasilitas */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-semibold text-slate-800">
-                    Fasilitas
-                  </label>
-
+                  <label className="text-xs font-semibold text-slate-800">Fasilitas</label>
                   <button
                     type="button"
                     onClick={() => setAddingFacility(true)}
@@ -556,7 +581,6 @@ const handleDelete = async () => {
                   </button>
                 </div>
 
-                {/* Form tambah fasilitas - hanya muncul SATU kali */}
                 {addingFacility && (
                   <div className="mt-3 mb-3">
                     <div className="flex items-center gap-2">
@@ -572,15 +596,11 @@ const handleDelete = async () => {
                             e.preventDefault();
                             saveNewFacility();
                           }
-
-                          if (e.key === "Escape") {
-                            cancelAddFacility();
-                          }
+                          if (e.key === "Escape") cancelAddFacility();
                         }}
                         placeholder="Nama fasilitas baru"
                         className="flex-1 min-w-0 border border-[#1a9fb8] rounded-md px-3 py-2 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none"
                       />
-
                       <button
                         type="button"
                         onClick={cancelAddFacility}
@@ -588,7 +608,6 @@ const handleDelete = async () => {
                       >
                         Batal
                       </button>
-
                       <button
                         type="button"
                         onClick={saveNewFacility}
@@ -597,20 +616,15 @@ const handleDelete = async () => {
                         Tambah
                       </button>
                     </div>
-
                     {facilityError && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {facilityError}
-                      </p>
+                      <p className="text-xs text-red-500 mt-1">{facilityError}</p>
                     )}
                   </div>
                 )}
 
-                {/* Daftar fasilitas */}
                 <div className="space-y-3">
                   {facilityOptions.map(({ name, custom }) => {
                     const usedBy = custom ? facilityUsedByOthers(name) : 0;
-                    const canDelete = custom;
 
                     return (
                       <div
@@ -619,7 +633,7 @@ const handleDelete = async () => {
                       >
                         <div>
                           <span>{name}</span>
-                          {custom && usedBy > 0 && (
+                          {usedBy > 0 && (
                             <p className="text-[11px] font-normal text-slate-400">
                               Dipakai {usedBy} pospam lain
                             </p>
@@ -633,8 +647,7 @@ const handleDelete = async () => {
                             onChange={() => toggleFacility(name)}
                             className="w-4 h-4 rounded cursor-pointer accent-blue-700"
                           />
-
-                          {canDelete ? (
+                          {custom ? (
                             <button
                               type="button"
                               onClick={() => setFacilityToDelete(name)}
@@ -644,61 +657,56 @@ const handleDelete = async () => {
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           ) : (
-                            <span className="w-7" /> // ruang kosong agar checkbox tetap sejajar
+                            <span className="w-7" /> // agar checkbox tetap sejajar
                           )}
                         </div>
                       </div>
                     );
                   })}
                 </div>
+              </div>
 
-                {/* Tombol Hapus & Simpan */}
-                <div className="flex gap-3 mt-8">
-                  {mode === "edit" && (
-                    <button
-                      type="button"
-                      onClick={() => setConfirmOpen(true)}
-                      disabled={saving}
-                      className="flex-1 bg-[#d9444a] hover:bg-[#c23a40] text-white text-xs font-bold py-2.5 rounded-md disabled:opacity-60 disabled:cursor-not-allowed"
-                    >
-                      Hapus
-                    </button>
-                  )}
-
+              <div className="flex gap-3 pt-4">
+                {mode === "edit" && (
                   <button
-                    type="submit"
+                    type="button"
+                    onClick={() => setConfirmOpen(true)}
                     disabled={saving}
-                    className="flex-1 bg-[#fbbf24] hover:bg-[#f59e0b] text-slate-900 text-xs font-bold py-2.5 rounded-md disabled:opacity-60 disabled:cursor-not-allowed"
+                    className="flex-1 bg-[#d9444a] hover:bg-[#c23a40] text-white text-xs font-bold py-2.5 rounded-md disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {saving ? "Menyimpan..." : "Simpan"}
+                    Hapus
                   </button>
-                  <ConfirmDialog
-                    open={confirmOpen}
-                    onCancel={() => setConfirmOpen(false)}
-                    onConfirm={async () => {
-                      setConfirmOpen(false);
-                      await handleDelete();
-                    }}
-                  />
-                </div>
+                )}
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 bg-[#fbbf24] hover:bg-[#f59e0b] text-slate-900 text-xs font-bold py-2.5 rounded-md disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {saving ? "Menyimpan..." : "Simpan"}
+                </button>
               </div>
             </form>
           )}
         </div>
       </main>
-          <ConfirmDialog
-            open={!!facilityToDelete}
-            message={
-              facilityToDelete
-                ? facilityUsedByOthers(facilityToDelete) > 0
-                  ? `Fasilitas "${facilityToDelete}" dipakai ${facilityUsedByOthers(facilityToDelete)} pospam lain. Hapus dari semua pospam?`
-                  : `Hapus fasilitas "${facilityToDelete}" dari pilihan?`
-                : ""
-            }
-            onCancel={() => setFacilityToDelete(null)}
-            onConfirm={confirmRemoveFacility}
-          />
+
       <ToastContainer toasts={toasts} onDismiss={dismiss} />
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={async () => {
+          setConfirmOpen(false);
+          await handleDelete();
+        }}
+      />
+
+      <ConfirmDialog
+        open={!!facilityToDelete}
+        message={facilityDeleteMessage()}
+        onCancel={() => setFacilityToDelete(null)}
+        onConfirm={confirmRemoveFacility}
+      />
     </div>
   );
 }
