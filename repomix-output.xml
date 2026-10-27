@@ -3039,62 +3039,6 @@ export default function PublikMap({ pospams = [], userCoords = null }) {
 }
 </file>
 
-<file path="frontend/src/components/shared/ui/ConfirmDialog.jsx">
-// src/components/shared/ui/ConfirmDialog.jsx
-"use client";
-// import { AlertTriangle } from "lucide-react";
-import Modal from "./Modal";
-
-// Dialog konfirmasi aksi berisiko (hapus / nonaktifkan). Semua isi rata tengah.
-export default function ConfirmDialog({
-  open,
-  onClose,
-  onConfirm,
-  title,
-  children,
-  confirmLabel = "Ya, lanjutkan",
-  cancelLabel = "Batal",
-  loading = false,
-  error = "",
-  // icon: Icon = AlertTriangle,
-}) {
-  return (
-    <Modal open={open} onClose={loading ? undefined : onClose} title={title}>
-      <div className="flex flex-col items-center text-center">
-        {/* <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500 ring-8 ring-red-50/60">
-          <Icon size={22} />
-        </span> */}
-
-        <div className="text-sm leading-relaxed text-gray-600">{children}</div>
-
-        {error && (
-          <div className="mt-4 w-full rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-600">
-            {error}
-          </div>
-        )}
-
-        <div className="mt-6 flex w-full justify-flex gap-3">
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="min-w-[120px] flex-1 rounded-md border border-gray-300 px-5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
-          >
-            {cancelLabel}
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            className="min-w-[120px] flex-1 rounded-md bg-[#d9444a] px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#c23a40] disabled:opacity-50"
-          >
-            {loading ? "Memproses..." : confirmLabel}
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-</file>
-
 <file path="frontend/src/components/shared/ui/Toast.jsx">
 "use client";
 
@@ -3517,6 +3461,7 @@ export function buildWilayahList(rows = [], admins = []) {
       lokasi: r.location ?? "",
       area: r.area ?? "",
       fasilitas: Array.isArray(r.facility) ? r.facility : [],
+      koordinator: r.koor_name || "-",
       telepon: r.koor_phone || "-",
       lat,
       lng,
@@ -3839,6 +3784,63 @@ export default function RegionOverlay({ regions, onSelect, selectedId = null, de
             );
           })}
     </>
+  );
+}
+</file>
+
+<file path="frontend/src/components/shared/ui/ConfirmDialog.jsx">
+// src/components/shared/ui/ConfirmDialog.jsx
+"use client";
+// import { AlertTriangle } from "lucide-react";
+import Modal from "./Modal";
+
+// Dialog konfirmasi aksi berisiko (hapus / nonaktifkan). Semua isi rata tengah.
+export default function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  children,
+  confirmLabel = "Ya, lanjutkan",
+  cancelLabel = "Batal",
+  loading = false,
+  error = "",
+  confirmDisabled = false,
+  // icon: Icon = AlertTriangle,
+}) {
+  return (
+    <Modal open={open} onClose={loading ? undefined : onClose} title={title}>
+      <div className="flex flex-col items-center text-center">
+        {/* <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500 ring-8 ring-red-50/60">
+          <Icon size={22} />
+        </span> */}
+
+        <div className="text-sm leading-relaxed text-gray-600">{children}</div>
+
+        {error && (
+          <div className="mt-4 w-full rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-600">
+            {error}
+          </div>
+        )}
+
+        <div className="mt-6 flex w-full justify-flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="min-w-[120px] flex-1 rounded-md border border-gray-300 px-5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={loading || confirmDisabled}
+            className="min-w-[120px] flex-1 rounded-md bg-[#d9444a] px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#c23a40] disabled:opacity-50"
+          >
+            {loading ? "Memproses..." : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 </file>
@@ -4393,7 +4395,7 @@ export function deteksiTipeGambar(buf) {
 import { Router } from "express";
 import { listAdmin,createAdmin, updateAdmin, deleteAdmin } from "../controller/adminController.js";
 import { authRole } from "../middleware/authAdmin.js";
-import { validate, idParam, adminListQuery, adminCreateBody, adminUpdateBody } from "../middleware/validate.js";
+import { validate, idParam, adminListQuery, adminCreateBody, adminUpdateBody, adminDeleteBody } from "../middleware/validate.js";
 // import { createAdminSchema } from "../schema/adminSchema.js";
 
 const router = Router();
@@ -4404,7 +4406,7 @@ router.use(authRole("super_admin"));
 router.get("/", validate({ query: adminListQuery }), listAdmin);
 router.post("/", validate({ body: adminCreateBody }), createAdmin);
 router.put("/:id", validate({ params: idParam, body: adminUpdateBody }), updateAdmin);
-router.delete("/:id", validate({ params: idParam }), deleteAdmin);
+router.delete("/:id", validate({ params: idParam, body: adminDeleteBody }), deleteAdmin);
 
 export default router;
 </file>
@@ -4488,627 +4490,6 @@ export default function PublikLayout({ children }) {
       <main className="w-full max-w-6xl mx-auto p-4 md:p-6 flex-1">
         {children}
       </main>
-    </div>
-  );
-}
-</file>
-
-<file path="frontend/src/app/superadmin/dashboard/page.jsx">
-// src/app/superadmin/dashboard/page.jsx
-"use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import dynamic from "next/dynamic";
-import SearchBar from "@/components/superadmin/SearchBar";
-import StatusIndicator from "@/components/superadmin/StatusIndicator";
-import WilayahAccordion from "@/components/superadmin/WilayahAccordion";
-import PospamCardList from "@/components/superadmin/PospamCardList";
-import EmptyState from "@/components/superadmin/EmptyState";
-import { getPospamAll, getAdminList } from "@/lib/api";
-import { buildWilayahList } from "@/lib/wilayahData";
-import { mockWilayahList } from "@/mocks/wilayah";
-
-// Peta hanya dirender di browser (Leaflet butuh window)
-const MapContainer = dynamic(() => import("@/components/shared/map/MapContainer"), { ssr: false });
-
-// true = pakai data dummy (src/mocks/wilayah.js)
-const USE_MOCK = false;
-
-const norm = (s) => s.trim().toLowerCase();
-const countPospam = (list) => list.reduce((n, w) => n + w.pospam.length, 0);
-
-// Ubah data dummy ke bentuk baris BE
-const mockRows = () =>
-  mockWilayahList.flatMap((w) =>
-    w.pospam.map((p) => ({
-      id: p.id,
-      name: p.nama,
-      region: w.nama,
-      location: p.lokasi,
-      facility: p.fasilitas,
-      koor_phone: p.telepon,
-      latitude: p.lat,
-      longitude: p.lng,
-    }))
-  );
-
-export default function SuperadminDashboard() {
-  const [wilayahList, setWilayahList] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState(null);
-
-  // Ambil pospam + akun admin (untuk nama polres), lalu kelompokkan per wilayah
-  const load = useCallback(async () => {
-    setLoadError("");
-    try {
-      if (USE_MOCK) {
-        setWilayahList(buildWilayahList(mockRows(), []));
-      } else {
-        const [rows, admins] = await Promise.all([
-          getPospamAll(),
-          getAdminList().catch(() => []),
-        ]);
-        setWilayahList(buildWilayahList(rows, admins));
-      }
-    } catch (err) {
-      setLoadError(err.message || "Gagal memuat data pospam");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const wilayahOptions = useMemo(() => wilayahList.map((w) => w.nama), [wilayahList]);
-  const selectedWilayah = wilayahList.find((w) => w.id === selectedId) ?? null;
-
-  // Hasil pencarian untuk daftar akordeon
-  const q = search.toLowerCase();
-  const filtered = wilayahList.filter(
-    (w) => w.nama.toLowerCase().includes(q) || w.region.toLowerCase().includes(q)
-  );
-
-  // Jumlah pospam yang sedang ditampilkan dari total semua wilayah
-  const totalPospam = countPospam(wilayahList);
-  const currentPospam = countPospam(selectedWilayah ? [selectedWilayah] : filtered);
-  const invalidCount = wilayahList.reduce(
-    (n, w) => n + w.pospam.filter((p) => !p.valid).length,
-    0
-  );
-
-  // Wilayah terpilih kalau teks pencarian persis sama dengan namanya
-  const handleSearchChange = (value) => {
-    setSearch(value);
-    const match = wilayahList.find((w) => norm(w.nama) === norm(value));
-    setSelectedId(match?.id ?? null);
-  };
-
-  // klik poligon/pin di peta kemudian samakan isi search bar
-  const handleSelectRegion = (wilayah) => {
-    setSelectedId(wilayah?.id ?? null);
-    setSearch(wilayah ? wilayah.nama : "");
-  };
-
-  return (
-    <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 rounded-xl bg-white px-12 pb-10 pt-6 shadow-sm">
-        {/* Pencarian + jumlah pospam */}
-        <div className="flex items-center justify-between gap-4">
-          <SearchBar value={search} onChange={handleSearchChange} options={wilayahOptions} />
-          <StatusIndicator current={currentPospam} total={totalPospam} />
-        </div>
-
-        {/* Gagal memuat data */}
-        {loadError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-center">
-            <p className="text-sm text-red-600">{loadError}</p>
-            <button
-              onClick={() => { setLoading(true); load(); }}
-              className="mt-3 rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-100"
-            >
-              Coba lagi
-            </button>
-          </div>
-        )}
-
-        {/* Peta sebaran pospam */}
-        <div className="h-[calc(100vh-260px)] min-h-[480px] overflow-hidden rounded-xl">
-          <MapContainer
-            wilayahList={wilayahList}
-            selectedWilayah={selectedWilayah}
-            onSelectRegion={handleSelectRegion}
-          />
-        </div>
-
-        {/* Koordinat di luar Jateng: tidak digambar di peta, tapi tetap dihitung */}
-        {invalidCount > 0 && (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            {invalidCount} pospam tidak tampil di peta karena koordinatnya berada di luar Jawa
-            Tengah. Periksa data latitude/longitude pospam tersebut.
-          </p>
-        )}
-
-        {/* Daftar pospam: satu wilayah kalau dipilih, semua wilayah kalau tidak */}
-        <div className="mt-4">
-          {loading ? (
-            <p className="py-8 text-center text-sm text-gray-400">Memuat data pospam...</p>
-          ) : wilayahList.length === 0 && !loadError ? (
-            <EmptyState message="Belum ada data pospam" />
-          ) : selectedWilayah ? (
-            <PospamCardList wilayah={selectedWilayah} />
-          ) : (
-            <WilayahAccordion wilayahList={filtered} />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-</file>
-
-<file path="frontend/src/app/superadmin/kelola-admin/page.jsx">
-// src/app/superadmin/kelola-admin/page.jsx
-"use client";
-import { useCallback, useEffect, useState } from "react";
-import { Plus, UserX } from "lucide-react";
-import AdminTable from "@/components/superadmin/AdminTable";
-import AdminFormModal from "@/components/superadmin/AdminFormModal";
-import EmptyState from "@/components/superadmin/EmptyState";
-import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
-import { getAdminList, createAdmin, updateAdmin } from "@/lib/api";
-import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
-
-const norm = (s) => (s ?? "").trim().toLowerCase();
-
-// Urut abjad menurut nama polres (tidak peka huruf besar/kecil, angka diurut sebagai angka)
-const byName = (a, b) =>
-  (a.name ?? "").localeCompare(b.name ?? "", "id", { sensitivity: "base", numeric: true });
-
-// Pesan error BE (terutama pelanggaran UNIQUE dari database) dibuat lebih jelas
-function friendlyError(err) {
-  const msg = err?.message || "";
-  const dup = /duplicate|unique/i.test(msg);
-  if (/profiles_region/i.test(msg) || (dup && /region/i.test(msg))) {
-    return "Wilayah ini sudah dipakai akun lain. Satu wilayah hanya boleh punya satu admin.";
-  }
-  if (/profiles_email/i.test(msg) || (dup && /email/i.test(msg))) {
-    return "Email sudah terdaftar. Gunakan email lain.";
-  }
-  return msg || "Terjadi kesalahan";
-}
-
-// Pemisah bergaris dengan judul kecil di tengah
-function SectionDivider({ children }) {
-  return (
-    <div className="flex items-center gap-4" role="separator">
-      <span className="h-px flex-1 bg-gray-200" />
-      <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-400">
-        {children}
-      </span>
-      <span className="h-px flex-1 bg-gray-200" />
-    </div>
-  );
-}
-
-export default function KelolaAdminPage() {
-  const [profiles, setProfiles] = useState([]); // semua profil dari BE (aktif + nonaktif)
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // admin yang sedang diedit, null = tambah baru
-
-  const [deactivateTarget, setDeactivateTarget] = useState(null);
-  const [deactivating, setDeactivating] = useState(false);
-  const [deactivateError, setDeactivateError] = useState("");
-
-  const [busyId, setBusyId] = useState(null); // admin yang sedang diaktifkan kembali
-  const { toasts, toast, dismiss } = useToast();
-
-  // Turunan dari data BE
-  const admins = profiles.filter((p) => p.role !== "super_admin");
-  const activeAdmins = admins.filter((a) => a.is_active !== false).sort(byName);
-  const inactiveAdmins = admins.filter((a) => a.is_active === false).sort(byName);
-
-  const loadProfiles = useCallback(async () => {
-    setLoadError("");
-    try {
-      const data = await getAdminList();
-      setProfiles(data ?? []);
-    } catch (err) {
-      setLoadError(err.message || "Gagal memuat data admin");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProfiles();
-  }, [loadProfiles]);
-
-  function openAdd() {
-    setEditing(null);
-    setModalOpen(true);
-  }
-
-  function openEdit(admin) {
-    setEditing(admin);
-    setModalOpen(true);
-  }
-
-  function closeForm() {
-    setModalOpen(false);
-    setEditing(null);
-  }
-
-  function closeDeactivate() {
-    setDeactivateTarget(null);
-    setDeactivateError("");
-  }
-
-  // Cek bentrok email/wilayah di semua akun (termasuk nonaktif) sebelum ke BE
-  function findConflict(data, ignoreId) {
-    const emailHit = profiles.find(
-      (p) => p.id !== ignoreId && norm(p.email) === norm(data.email)
-    );
-    if (emailHit) {
-      return emailHit.is_active === false
-        ? `Email ini milik akun nonaktif "${emailHit.name}". Aktifkan kembali akun tersebut dari bagian "Akun nonaktif", atau gunakan email lain.`
-        : `Email ini sudah dipakai akun "${emailHit.name}". Gunakan email lain.`;
-    }
-    const regionHit = profiles.find(
-      (p) => p.id !== ignoreId && p.region && norm(p.region) === norm(data.region)
-    );
-    if (regionHit) {
-      return regionHit.is_active === false
-        ? `Wilayah "${regionHit.region}" masih dimiliki akun nonaktif "${regionHit.name}". Aktifkan kembali akun itu dari bagian "Akun nonaktif", atau ubah wilayahnya.`
-        : `Wilayah "${regionHit.region}" sudah dipakai akun "${regionHit.name}". Satu wilayah hanya boleh punya satu admin.`;
-    }
-    return null;
-  }
-
-  // Dipanggil AdminFormModal. Kalau melempar error, modal tetap terbuka dan menampilkan pesannya.
-  async function handleSave(data) {
-    const conflict = findConflict(data, editing?.id);
-    if (conflict) throw new Error(conflict);
-
-    try {
-      if (editing) {
-        // Kirim hanya field yang berubah (hindari update email Auth yang tidak perlu)
-        const changes = {};
-        if (data.name !== editing.name) changes.name = data.name;
-        if (data.email !== editing.email) changes.email = data.email;
-        if (data.region !== editing.region) changes.region = data.region;
-        if (Object.keys(changes).length > 0) await updateAdmin(editing.id, changes);
-      } else {
-        await createAdmin({
-          name: data.name,
-          email: data.email,
-          password: data.password,
-          region: data.region,
-        });
-      }
-    } catch (err) {
-      throw new Error(friendlyError(err));
-    }
-    await loadProfiles();
-    toast.success(
-      editing
-        ? `Akun "${data.name}" berhasil diperbarui.`
-        : `Akun "${data.name}" berhasil ditambahkan.`
-    );
-  }
-
-  // "Hapus" = soft delete: akun dinonaktifkan, datanya tidak dihapus dari database
-  async function handleConfirmDeactivate() {
-    setDeactivating(true);
-    setDeactivateError("");
-    try {
-      await updateAdmin(deactivateTarget.id, { is_active: false });
-      toast.success(
-        `Akun "${deactivateTarget.name}" dinonaktifkan. Bisa diaktifkan kembali dari bagian "Akun nonaktif" di bawah.`
-      );
-      closeDeactivate();
-      await loadProfiles();
-    } catch (err) {
-      setDeactivateError(friendlyError(err));
-    } finally {
-      setDeactivating(false);
-    }
-  }
-
-  async function handleReactivate(admin) {
-    setBusyId(admin.id);
-    try {
-      await updateAdmin(admin.id, { is_active: true });
-      await loadProfiles();
-      toast.success(`Akun "${admin.name}" diaktifkan kembali.`);
-    } catch (err) {
-      toast.error(friendlyError(err));
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
-      <div className="mx-auto min-h-[600px] w-full max-w-7xl rounded-xl bg-white px-12 pb-10 pt-8 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-900">Kelola Admin</h1>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 rounded-md bg-[#1BA3BA] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0]"
-          >
-            <Plus size={16} /> Tambah Admin
-          </button>
-        </div>
-
-        <div className="mb-6 mt-4 h-[3px] rounded bg-gray-300" />
-
-        {loading ? (
-          <p className="py-12 text-center text-sm text-gray-400">Memuat data admin...</p>
-        ) : loadError ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center">
-            <p className="text-sm text-red-600">{loadError}</p>
-            <button
-              onClick={() => { setLoading(true); loadProfiles(); }}
-              className="mt-3 rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-100"
-            >
-              Coba lagi
-            </button>
-          </div>
-        ) : admins.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <div className="flex flex-col gap-6">
-            {activeAdmins.length > 0 ? (
-              <AdminTable
-                admins={activeAdmins}
-                onEdit={openEdit}
-                onDelete={setDeactivateTarget}
-                onReactivate={handleReactivate}
-                busyId={busyId}
-              />
-            ) : (
-              <EmptyState message="Tidak ada admin aktif" />
-            )}
-
-            {/* Akun nonaktif selalu tampil di bawah, dipisah garis + judul kecil */}
-            {inactiveAdmins.length > 0 && (
-              <>
-                <SectionDivider>Akun nonaktif ({inactiveAdmins.length})</SectionDivider>
-                <AdminTable
-                  admins={inactiveAdmins}
-                  onEdit={openEdit}
-                  onDelete={setDeactivateTarget}
-                  onReactivate={handleReactivate}
-                  busyId={busyId}
-                />
-              </>
-            )}
-          </div>
-        )}
-      </div>
-
-      <AdminFormModal
-        open={modalOpen}
-        onClose={closeForm}
-        onSave={handleSave}
-        initialData={editing}
-      />
-
-      <ConfirmDialog
-        open={!!deactivateTarget}
-        onClose={closeDeactivate}
-        onConfirm={handleConfirmDeactivate}
-        title="Nonaktifkan Akun Admin"
-        icon={UserX}
-        confirmLabel="Nonaktifkan"
-        loading={deactivating}
-        error={deactivateError}
-      >
-        <p>Akun admin</p>
-        <p className="my-1 text-base font-semibold uppercase tracking-wide text-gray-900">
-          {deactivateTarget?.name}
-        </p>
-        {deactivateTarget?.region && (
-          <p className="text-xs text-gray-500">{deactivateTarget.region}</p>
-        )}
-        <p className="mt-3">akan dinonaktifkan dan tidak bisa login lagi.</p>
-        <p className="mt-1 text-xs text-gray-400">
-          Data pospam tetap tersimpan, dan akun bisa diaktifkan kembali kapan saja.
-        </p>
-      </ConfirmDialog>
-      <ToastContainer toasts={toasts} onDismiss={dismiss} />
-    </div>
-  );
-}
-</file>
-
-<file path="frontend/src/app/superadmin/nomor-nasional/page.jsx">
-// src/app/superadmin/nomor-nasional/page.jsx
-"use client";
-import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
-import NomorNasionalTable from "@/components/superadmin/NomorNasionalTable";
-import NomorNasionalFormModal from "@/components/superadmin/NomorNasionalFormModal";
-import EmptyState from "@/components/superadmin/EmptyState";
-import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
-import {
-  getNomorNasionalAll,
-  createNomorNasional,
-  updateNomorNasional,
-  deleteNomorNasional,
-} from "@/lib/api";
-import { uploadNomorIcon } from "@/lib/uploadIcon";
-import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
-
-// Data BE (tabel nomor_darurat) -> bentuk yang dipakai komponen UI
-const fromApi = (r) => ({
-  id: r.id,
-  nama: r.agency_name,
-  nomor: r.telephone,
-  logoUrl: r.icon,
-});
-
-export default function NomorNasionalPage() {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editData, setEditData] = useState(null);
-
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
-
-  const { toasts, toast, dismiss } = useToast(); // ← diubah (menggantikan state notice)
-
-  const load = useCallback(async () => {
-    setLoadError("");
-    try {
-      const rows = await getNomorNasionalAll();
-      setData((rows ?? []).map(fromApi));
-    } catch (err) {
-      setLoadError(err.message || "Gagal memuat nomor nasional");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  function openAdd() {
-    setEditData(null);
-    setModalOpen(true);
-  }
-
-  function openEdit(item) {
-    setEditData(item);
-    setModalOpen(true);
-  }
-
-  function closeForm() {
-    setModalOpen(false);
-  }
-
-  function closeDelete() {
-    setDeleteTarget(null);
-    setDeleteError("");
-  }
-
-  // Dipanggil NomorNasionalFormModal. Kalau melempar error, modal tetap terbuka dan menampilkannya.
-  async function handleSave(item) {
-    // Ikon baru (kalau ada) diunggah dulu; kalau tidak ada file baru, ikon lama tidak disentuh
-    const iconUrl = item.logoFile ? await uploadNomorIcon(item.logoFile) : null;
-
-    if (item.id) {
-      const lama = data.find((d) => d.id === item.id);
-      const changes = {};
-      if (item.nama !== lama?.nama) changes.agency_name = item.nama;
-      if (item.nomor !== lama?.nomor) changes.telephone = item.nomor;
-      if (iconUrl) changes.icon = iconUrl;
-      if (Object.keys(changes).length > 0) await updateNomorNasional(item.id, changes);
-    } else {
-      await createNomorNasional({
-        agency_name: item.nama,
-        telephone: item.nomor,
-        ...(iconUrl ? { icon: iconUrl } : {}),
-      });
-    }
-
-    await load();
-    toast.success( // ← diubah
-      item.id ? `Nomor "${item.nama}" diperbarui.` : `Nomor "${item.nama}" ditambahkan.`
-    );
-  }
-
-  // Hapus permanen (tabel nomor_darurat tidak punya kolom is_active)
-  async function handleConfirmDelete() {
-    setDeleting(true);
-    setDeleteError("");
-    try {
-      await deleteNomorNasional(deleteTarget.id);
-      toast.success(`Nomor "${deleteTarget.nama}" dihapus.`); // ← diubah
-      closeDelete();
-      await load();
-    } catch (err) {
-      setDeleteError(err.message || "Gagal menghapus nomor");
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
-      <div className="mx-auto min-h-[600px] w-full max-w-7xl rounded-xl bg-white px-12 pb-10 pt-8 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-900">Nomor Nasional</h1>
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 rounded-md bg-[#1BA3BA] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0]"
-          >
-            <Plus size={16} /> Tambah Nomor Nasional
-          </button>
-        </div>
-
-        <div className="mb-6 mt-4 h-[3px] rounded bg-gray-300" />
-
-        {loading ? (
-          <p className="py-12 text-center text-sm text-gray-400">Memuat nomor nasional...</p>
-        ) : loadError ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center">
-            <p className="text-sm text-red-600">{loadError}</p>
-            <button
-              onClick={() => { setLoading(true); load(); }}
-              className="mt-3 rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-100"
-            >
-              Coba lagi
-            </button>
-          </div>
-        ) : data.length === 0 ? (
-          <EmptyState message="Belum ada nomor nasional" />
-        ) : (
-          <NomorNasionalTable
-            data={data}
-            onEdit={openEdit}
-            onDelete={(id) => setDeleteTarget(data.find((d) => d.id === id) ?? null)}
-          />
-        )}
-      </div>
-
-      <NomorNasionalFormModal
-        open={modalOpen}
-        onClose={closeForm}
-        onSave={handleSave}
-        editData={editData}
-      />
-
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onClose={closeDelete}
-        onConfirm={handleConfirmDelete}
-        title="Hapus Nomor Nasional"
-        icon={Trash2}
-        confirmLabel="Hapus"
-        loading={deleting}
-        error={deleteError}
-      >
-        <p>Yakin ingin menghapus nomor</p>
-        <p className="my-1 text-base font-semibold uppercase tracking-wide text-gray-900">
-          {deleteTarget?.nama}
-        </p>
-        {deleteTarget?.nomor && <p className="text-xs text-gray-500">{deleteTarget.nomor}</p>}
-        <p className="mt-3 text-xs text-gray-400">Tindakan ini tidak dapat dibatalkan.</p>
-      </ConfirmDialog>
-
-      <ToastContainer toasts={toasts} onDismiss={dismiss} />{/* ← diubah (ditambahkan) */}
     </div>
   );
 }
@@ -5374,103 +4755,53 @@ export default function RegionPicker({ value, onChange, required = true }) {
 }
 </file>
 
-<file path="frontend/src/components/superadmin/AdminTable.jsx">
-// src/components/superadmin/AdminTable.jsx
-import { Mail, Pencil, RotateCcw, Trash2 } from "lucide-react";
-
-export default function AdminTable({ admins, onEdit, onDelete, onReactivate, busyId }) {
-  return (
-    <div className="flex flex-col gap-3">
-      {admins.map((a) => {
-        const inactive = a.is_active === false;
-        return (
-          <div
-            key={a.id}
-            className={`flex items-center justify-between rounded-lg border px-6 py-4 shadow-sm transition-shadow hover:shadow-md ${
-              inactive ? "border-gray-200 bg-gray-100/70" : "border-gray-100 bg-[#F8F8FA]"
-            }`}
-          >
-            <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <p
-                  className={`truncate text-base font-semibold uppercase tracking-wide ${
-                    inactive ? "text-gray-400" : "text-gray-900"
-                  }`}
-                >
-                  {a.name}
-                </p>
-                {a.region && (
-                  <span className="shrink-0 rounded-full bg-[#1BA3BA]/10 px-2.5 py-0.5 text-[11px] font-medium text-[#158aa0]">
-                    {a.region}
-                  </span>
-                )}
-                {inactive && (
-                  <span className="shrink-0 rounded-full bg-gray-200 px-2.5 py-0.5 text-[11px] font-medium text-gray-600">
-                    Nonaktif
-                  </span>
-                )}
-              </div>
-              <p
-                className={`mt-1 flex items-center gap-2 text-sm ${
-                  inactive ? "text-gray-400" : "text-gray-500"
-                }`}
-              >
-                <Mail size={15} className="shrink-0" />
-                <span className="truncate">{a.email}</span>
-              </p>
-            </div>
-
-            <div className="ml-4 flex shrink-0 gap-2">
-              {inactive ? (
-                <button
-                  onClick={() => onReactivate(a)}
-                  disabled={busyId === a.id}
-                  className="flex items-center gap-2 rounded-md border border-[#1BA3BA] px-3.5 py-2 text-sm font-medium text-[#1BA3BA] transition-colors hover:bg-[#1BA3BA] hover:text-white disabled:opacity-50"
-                >
-                  <RotateCcw size={15} />
-                  {busyId === a.id ? "Memproses..." : "Aktifkan kembali"}
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => onEdit(a)}
-                    aria-label={`Edit ${a.name}`}
-                    title="Edit"
-                    className="flex h-9 w-9 items-center justify-center rounded-md bg-[#1BA3BA] text-white shadow-sm transition-colors hover:bg-[#158aa0]"
-                  >
-                    <Pencil size={17} />
-                  </button>
-                  <button
-                    onClick={() => onDelete(a)}
-                    aria-label={`Nonaktifkan ${a.name}`}
-                    title="Nonaktifkan"
-                    className="flex h-9 w-9 items-center justify-center rounded-md bg-[#1BA3BA] text-white shadow-sm transition-colors hover:bg-red-600"
-                  >
-                    <Trash2 size={17} />
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-</file>
-
 <file path="frontend/src/components/superadmin/PospamCardItem.jsx">
 // src/components/superadmin/PospamCardItem.jsx
+
+function waNumber(nomor) {
+  let d = String(nomor || "").replace(/\D/g, "");
+  if (!d) return null;
+  if (d.startsWith("0")) d = "62" + d.slice(1);
+  else if (d.startsWith("8")) d = "62" + d;
+  return d;
+}
+
+function tampilTelepon(nomor) {
+  const wa = waNumber(nomor);
+  if (!wa || !wa.startsWith("62")) return nomor || "-";
+  const r = wa.slice(2);
+  return `+62 ${r.slice(0, 3)}-${r.slice(3, 7)}${r.length > 7 ? "-" + r.slice(7) : ""}`;
+}
+
 export default function PospamCardItem({ nomor, pospam }) {
+  const wa = waNumber(pospam.telepon);
+  const hasCoord = Number.isFinite(pospam.lat) && Number.isFinite(pospam.lng);
+  const mapsUrl = hasCoord
+    ? `https://www.google.com/maps/search/?api=1&query=${pospam.lat},${pospam.lng}`
+    : null;
+
+  // Hapus 'border', 'px-3', 'py-2', dan buat bentuknya membulat (rounded-full)
+  const btn = "flex items-center justify-center border-gray-300 rounded-full px-2 py-2 transition-colors bg-blue-50 text-gray-700 hover:bg-gray-100";
+  const btnOff = "cursor-not-allowed opacity-30 grayscale";
+
   return (
-    <div className="flex items-stretch overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm">
-      <div className="flex w-12 shrink-0 items-center justify-center bg-[#1BA3BA] text-lg font-semibold text-white">
+    <div className="flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm sm:flex-row sm:items-stretch">
+      {/* Nomor urut */}
+      <div className="flex w-full shrink-0 items-center justify-center bg-[#1BA3BA] py-2 text-lg font-semibold text-white sm:w-12 sm:py-0">
         {nomor}
       </div>
+
+      {/* Info pospam */}
       <div className="flex-1 px-5 py-3">
         <p className="text-base font-semibold text-gray-900">{pospam.nama}</p>
         <p className="text-xs text-gray-500">
           {[pospam.lokasi, pospam.area].filter(Boolean).join(", ")}
+        </p>
+        <p className="mt-1 text-sm text-gray-700">
+          {tampilTelepon(pospam.telepon)}
+          {pospam.koordinator && pospam.koordinator !== "-" && (
+            <span className="text-gray-500"> ({pospam.koordinator})</span>
+          )}
         </p>
         <div className="mt-2 flex flex-wrap gap-1.5">
           {pospam.fasilitas.map((f) => (
@@ -5483,8 +4814,40 @@ export default function PospamCardItem({ nomor, pospam }) {
           ))}
         </div>
       </div>
-      <div className="flex items-center whitespace-nowrap px-5 py-3 text-sm text-gray-700">
-        ({pospam.telepon})
+
+      {/* Aksi: Ikon saja tanpa border */}
+      <div className="flex flex-row items-center gap-1 px-5 pb-3 sm:flex-row sm:justify-center sm:py-3">
+        {wa ? (
+          <a
+            href={`https://wa.me/${wa}`}
+            target="_blank"
+            rel="noreferrer"
+            title="Kirim WhatsApp"
+            className={`${btn} hover:bg-emerald-50`}
+          >
+            <img src="/icons/whatsapp-icon.png" alt="WhatsApp" className="h-6 w-6 object-contain" /> 
+          </a>
+        ) : (
+          <span title="Nomor WhatsApp tidak tersedia" className={`${btn} ${btnOff}`}>
+            <img src="/icons/whatsapp-icon.png" alt="WhatsApp" className="h-6 w-6 object-contain" />
+          </span>
+        )}
+
+        {mapsUrl ? (
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noreferrer"
+            title="Buka Google Maps"
+            className={`${btn} hover:bg-blue-50`}
+          >
+            <img src="/icons/google-maps.png" alt="Google Maps" className="h-6 w-6 object-contain" />
+          </a>
+        ) : (
+          <span title="Lokasi Maps tidak tersedia" className={`${btn} ${btnOff}`}>
+            <img src="/icons/google-maps.png" alt="Google Maps" className="h-6 w-6 object-contain" />
+          </span>
+        )}
       </div>
     </div>
   );
@@ -5569,152 +4932,6 @@ async function logout() {
 
   return { profile, loading, login, logout, refreshProfile: loadProfile };
 }
-</file>
-
-<file path="frontend/next.config.mjs">
-/** @type {import('next').NextConfig} */
- const nextConfig = { 
-   allowedDevOrigins: ["192.168.66.239"]
- };
-
-export default nextConfig;
-</file>
-
-<file path="backend/src/controller/adminController.js">
-import { supabase, supabaseAdmin } from "../config/supabase.js";
-import { HttpError, wrap } from "../utils/http.js";
-
-// Helper penanganan error Supabase Auth
-function errorAuth(error) {
-  const pesan = (error.message || "").toLowerCase();
-  if (error.status === 422 || pesan.includes("already")) {
-    return new HttpError(409, "Email sudah terdaftar");
-  }
-  if (pesan.includes("password")) {
-    return new HttpError(400, "Password tidak memenuhi syarat");
-  }
-  return error;
-}
-
-async function ambilAdmin(id) {
-  const { data, error } = await supabaseAdmin
-    .from("profiles")
-    .select("id, name, email, role, region, is_active, must_change_password, created_at")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) throw new HttpError(404, "Akun admin tidak ditemukan");
-  return data;
-}
-
-// 1. Daftar seluruh akun admin (dengan pencarian nama/email/region)
-export const listAdmin = wrap(async (req, res) => {
-  const { q } = req.valid.query;
-
-  let query = supabaseAdmin
-    .from("profiles")
-    .select("id, name, email, role, region, is_active, created_at")
-    .order("created_at", { ascending: false });
-
-  if (q) {
-    const aman = q.replace(/[%_\\]/g, " ");
-    query = query.or(`name.ilike.%${aman}%,email.ilike.%${aman}%,region.ilike.%${aman}%`);
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-
-  res.json({ data });
-});
-
-// 2. Buat akun admin baru (oleh Superadmin)
-export const createAdmin = wrap(async (req, res) => {
-  const { name, email, password, region, role = "admin_wilayah" } = req.valid.body;
-
-  // Gunakan supabaseAdmin (bukan supabase biasa)
-  const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-  });
-
-  if (authErr) throw errorAuth(authErr);
-
-  // Simpan profil di tabel profiles pakai client biasa/admin
-  const { error: errProfil } = await supabaseAdmin.from("profiles").insert({
-    id: authData.user.id,
-    name,
-    email,
-    region,
-    role,
-    is_active: true,
-    must_change_password: true,
-  });
-
-  // Rollback pakai supabaseAdmin jika simpan profil gagal
-  if (errProfil) {
-    await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-    throw errProfil;
-  }
-
-  res.status(201).json({
-    message: "Akun admin berhasil dibuat",
-    data: {
-      id: authData.user.id,
-      name,
-      email,
-      region,
-      role,
-      is_active: true,
-    },
-  });
-});
-
-// 3. Perbarui data admin / ubah status aktif
-export const updateAdmin = wrap(async (req, res) => {
-  const { id } = req.valid.params;
-  const { name, email, region, role, is_active } = req.valid.body;
-
-  await ambilAdmin(id); // Memastikan ID ada
-
-  // Update email di Supabase Auth jika berubah
-  if (email !== undefined) {
-    const { error: errAuth } = await supabaseAdmin.auth.admin.updateUserById(id, {
-      email,
-      email_confirm: true,
-    });
-    if (errAuth) throw errorAuth(errAuth);
-  }
-
-  const ubahProfil = {};
-  if (name !== undefined) ubahProfil.name = name;
-  if (email !== undefined) ubahProfil.email = email;
-  if (region !== undefined) ubahProfil.region = region;
-  if (role !== undefined) ubahProfil.role = role;
-  if (is_active !== undefined) ubahProfil.is_active = is_active;
-
-  if (Object.keys(ubahProfil).length > 0) {
-    const { error } = await supabaseAdmin.from("profiles").update(ubahProfil).eq("id", id);
-    if (error) throw error;
-  }
-
-  res.json({
-    message: "Data admin berhasil diperbarui",
-    data: await ambilAdmin(id),
-  });
-});
-
-// 4. Hapus akun admin
-export const deleteAdmin = wrap(async (req, res) => {
-  const { id } = req.valid.params;
-  await ambilAdmin(id);
-
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(id); // Profil ikut terhapus otomatis (cascade)
-  if (error) throw error;
-
-  res.json({ message: "Akun admin berhasil dihapus" });
-});
 </file>
 
 <file path="backend/src/controller/authController.js">
@@ -6503,6 +5720,692 @@ export default function NomorDaruratPage() {
 }
 </file>
 
+<file path="frontend/src/app/superadmin/dashboard/page.jsx">
+// src/app/superadmin/dashboard/page.jsx
+"use client";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
+import SearchBar from "@/components/superadmin/SearchBar";
+import StatusIndicator from "@/components/superadmin/StatusIndicator";
+import WilayahAccordion from "@/components/superadmin/WilayahAccordion";
+import PospamCardList from "@/components/superadmin/PospamCardList";
+import EmptyState from "@/components/superadmin/EmptyState";
+import { getPospamAll, getAdminList } from "@/lib/api";
+import { buildWilayahList } from "@/lib/wilayahData";
+import { mockWilayahList } from "@/mocks/wilayah";
+
+// Peta hanya dirender di browser (Leaflet butuh window)
+const MapContainer = dynamic(() => import("@/components/shared/map/MapContainer"), { ssr: false });
+
+// true = pakai data dummy (src/mocks/wilayah.js)
+const USE_MOCK = false;
+
+const norm = (s) => s.trim().toLowerCase();
+const countPospam = (list) => list.reduce((n, w) => n + w.pospam.length, 0);
+
+// Ubah data dummy ke bentuk baris BE
+const mockRows = () =>
+  mockWilayahList.flatMap((w) =>
+    w.pospam.map((p) => ({
+      id: p.id,
+      name: p.nama,
+      region: w.nama,
+      location: p.lokasi,
+      facility: p.fasilitas,
+      koor_phone: p.telepon,
+      latitude: p.lat,
+      longitude: p.lng,
+    }))
+  );
+
+export default function SuperadminDashboard() {
+  const [wilayahList, setWilayahList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [search, setSearch] = useState("");
+  const [selectedId, setSelectedId] = useState(null);
+
+  // Ambil pospam + akun admin (untuk nama polres), lalu kelompokkan per wilayah
+  const load = useCallback(async () => {
+    setLoadError("");
+    try {
+      if (USE_MOCK) {
+        setWilayahList(buildWilayahList(mockRows(), []));
+      } else {
+        const [rows, admins] = await Promise.all([
+          getPospamAll(),
+          getAdminList().catch(() => []),
+        ]);
+        setWilayahList(buildWilayahList(rows, admins));
+      }
+    } catch (err) {
+      setLoadError(err.message || "Gagal memuat data pospam");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const wilayahOptions = useMemo(() => wilayahList.map((w) => w.nama), [wilayahList]);
+  const selectedWilayah = wilayahList.find((w) => w.id === selectedId) ?? null;
+
+  // Hasil pencarian untuk daftar akordeon
+  const q = search.toLowerCase();
+  const filtered = wilayahList.filter(
+    (w) => w.nama.toLowerCase().includes(q) || w.region.toLowerCase().includes(q)
+  );
+
+  // Jumlah pospam yang sedang ditampilkan dari total semua wilayah
+  const totalPospam = countPospam(wilayahList);
+  const currentPospam = countPospam(selectedWilayah ? [selectedWilayah] : filtered);
+  const invalidCount = wilayahList.reduce(
+    (n, w) => n + w.pospam.filter((p) => !p.valid).length,
+    0
+  );
+
+  // Wilayah terpilih kalau teks pencarian persis sama dengan namanya
+  const handleSearchChange = (value) => {
+    setSearch(value);
+    const match = wilayahList.find((w) => norm(w.nama) === norm(value));
+    setSelectedId(match?.id ?? null);
+  };
+
+  // klik poligon/pin di peta kemudian samakan isi search bar
+  const handleSelectRegion = (wilayah) => {
+    setSelectedId(wilayah?.id ?? null);
+    setSearch(wilayah ? wilayah.nama : "");
+  };
+
+  return (
+    <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 rounded-xl bg-white px-12 pb-10 pt-6 shadow-sm">
+        {/* Pencarian + jumlah pospam */}
+        <div className="flex items-center justify-between gap-4">
+          <SearchBar value={search} onChange={handleSearchChange} options={wilayahOptions} />
+          <StatusIndicator current={currentPospam} total={totalPospam} />
+        </div>
+
+        {/* Gagal memuat data */}
+        {loadError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-4 text-center">
+            <p className="text-sm text-red-600">{loadError}</p>
+            <button
+              onClick={() => { setLoading(true); load(); }}
+              className="mt-3 rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-100"
+            >
+              Coba lagi
+            </button>
+          </div>
+        )}
+
+        {/* Peta sebaran pospam */}
+        <div className="h-[calc(100vh-260px)] min-h-[480px] overflow-hidden rounded-xl">
+          <MapContainer
+            wilayahList={wilayahList}
+            selectedWilayah={selectedWilayah}
+            onSelectRegion={handleSelectRegion}
+          />
+        </div>
+
+        {/* Koordinat di luar Jateng: tidak digambar di peta, tapi tetap dihitung */}
+        {invalidCount > 0 && (
+          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            {invalidCount} pospam tidak tampil di peta karena koordinatnya berada di luar Jawa
+            Tengah. Periksa data latitude/longitude pospam tersebut.
+          </p>
+        )}
+
+        {/* Daftar pospam: satu wilayah kalau dipilih, semua wilayah kalau tidak */}
+        <div className="mt-4">
+          {loading ? (
+            <p className="py-8 text-center text-sm text-gray-400">Memuat data pospam...</p>
+          ) : wilayahList.length === 0 && !loadError ? (
+            <EmptyState message="Belum ada data pospam" />
+          ) : selectedWilayah ? (
+            <PospamCardList wilayah={selectedWilayah} />
+          ) : (
+            <WilayahAccordion wilayahList={filtered} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/app/superadmin/kelola-admin/page.jsx">
+// src/app/superadmin/kelola-admin/page.jsx
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { Plus, UserX } from "lucide-react";
+import AdminTable from "@/components/superadmin/AdminTable";
+import AdminFormModal from "@/components/superadmin/AdminFormModal";
+import EmptyState from "@/components/superadmin/EmptyState";
+import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
+import { getAdminList, createAdmin, updateAdmin, deleteAdmin } from "@/lib/api";
+import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
+import PasswordInput from "@/components/shared/ui/PasswordInput";
+
+const norm = (s) => (s ?? "").trim().toLowerCase();
+
+// Urut abjad menurut nama polres (tidak peka huruf besar/kecil, angka diurut sebagai angka)
+const byName = (a, b) =>
+  (a.name ?? "").localeCompare(b.name ?? "", "id", { sensitivity: "base", numeric: true });
+
+// Pesan error BE (terutama pelanggaran UNIQUE dari database) dibuat lebih jelas
+function friendlyError(err) {
+  const msg = err?.message || "";
+  const dup = /duplicate|unique/i.test(msg);
+  if (/profiles_region/i.test(msg) || (dup && /region/i.test(msg))) {
+    return "Wilayah ini sudah dipakai akun lain. Satu wilayah hanya boleh punya satu admin.";
+  }
+  if (/profiles_email/i.test(msg) || (dup && /email/i.test(msg))) {
+    return "Email sudah terdaftar. Gunakan email lain.";
+  }
+  return msg || "Terjadi kesalahan";
+}
+
+// Pemisah bergaris dengan judul kecil di tengah
+function SectionDivider({ children }) {
+  return (
+    <div className="flex items-center gap-4" role="separator">
+      <span className="h-px flex-1 bg-gray-200" />
+      <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-400">
+        {children}
+      </span>
+      <span className="h-px flex-1 bg-gray-200" />
+    </div>
+  );
+}
+
+export default function KelolaAdminPage() {
+  const [profiles, setProfiles] = useState([]); // semua profil dari BE (aktif + nonaktif)
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null); // admin yang sedang diedit, null = tambah baru
+
+  const [deactivateTarget, setDeactivateTarget] = useState(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const [deactivateError, setDeactivateError] = useState("");
+
+  const [busyId, setBusyId] = useState(null); // admin yang sedang diaktifkan kembali
+  const { toasts, toast, dismiss } = useToast();
+
+  const [permTarget, setPermTarget] = useState(null);
+  const [permDeleting, setPermDeleting] = useState(false);
+  const [permError, setPermError] = useState("");
+  const [permPassword, setPermPassword] = useState(""); // password superadmin untuk konfirmasi
+
+  // Turunan dari data BE
+  const admins = profiles.filter((p) => p.role !== "super_admin");
+  const activeAdmins = admins.filter((a) => a.is_active !== false).sort(byName);
+  const inactiveAdmins = admins.filter((a) => a.is_active === false).sort(byName);
+
+  const loadProfiles = useCallback(async () => {
+    setLoadError("");
+    try {
+      const data = await getAdminList();
+      setProfiles(data ?? []);
+    } catch (err) {
+      setLoadError(err.message || "Gagal memuat data admin");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProfiles();
+  }, [loadProfiles]);
+
+  function openAdd() {
+    setEditing(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(admin) {
+    setEditing(admin);
+    setModalOpen(true);
+  }
+
+  function closeForm() {
+    setModalOpen(false);
+    setEditing(null);
+  }
+
+  function closeDeactivate() {
+    setDeactivateTarget(null);
+    setDeactivateError("");
+  }
+
+  // Cek bentrok email/wilayah di semua akun (termasuk nonaktif) sebelum ke BE
+  function findConflict(data, ignoreId) {
+    const emailHit = profiles.find(
+      (p) => p.id !== ignoreId && norm(p.email) === norm(data.email)
+    );
+    if (emailHit) {
+      return emailHit.is_active === false
+        ? `Email ini milik akun nonaktif "${emailHit.name}". Aktifkan kembali akun tersebut dari bagian "Akun nonaktif", atau gunakan email lain.`
+        : `Email ini sudah dipakai akun "${emailHit.name}". Gunakan email lain.`;
+    }
+    const regionHit = profiles.find(
+      (p) => p.id !== ignoreId && p.region && norm(p.region) === norm(data.region)
+    );
+    if (regionHit) {
+      return regionHit.is_active === false
+        ? `Wilayah "${regionHit.region}" masih dimiliki akun nonaktif "${regionHit.name}". Aktifkan kembali akun itu dari bagian "Akun nonaktif", atau ubah wilayahnya.`
+        : `Wilayah "${regionHit.region}" sudah dipakai akun "${regionHit.name}". Satu wilayah hanya boleh punya satu admin.`;
+    }
+    return null;
+  }
+
+  // Dipanggil AdminFormModal. Kalau melempar error, modal tetap terbuka dan menampilkan pesannya.
+  async function handleSave(data) {
+    const conflict = findConflict(data, editing?.id);
+    if (conflict) throw new Error(conflict);
+
+    try {
+      if (editing) {
+        // Kirim hanya field yang berubah (hindari update email Auth yang tidak perlu)
+        const changes = {};
+        if (data.name !== editing.name) changes.name = data.name;
+        if (data.email !== editing.email) changes.email = data.email;
+        if (data.region !== editing.region) changes.region = data.region;
+        if (Object.keys(changes).length > 0) await updateAdmin(editing.id, changes);
+      } else {
+        await createAdmin({
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          region: data.region,
+        });
+      }
+    } catch (err) {
+      throw new Error(friendlyError(err));
+    }
+    await loadProfiles();
+    toast.success(
+      editing
+        ? `Akun "${data.name}" berhasil diperbarui.`
+        : `Akun "${data.name}" berhasil ditambahkan.`
+    );
+  }
+
+  // "Hapus" = soft delete: akun dinonaktifkan, datanya tidak dihapus dari database
+  async function handleConfirmDeactivate() {
+    setDeactivating(true);
+    setDeactivateError("");
+    try {
+      await updateAdmin(deactivateTarget.id, { is_active: false });
+      toast.success(
+        `Akun "${deactivateTarget.name}" dinonaktifkan. Bisa diaktifkan kembali dari bagian "Akun nonaktif" di bawah.`
+      );
+      closeDeactivate();
+      await loadProfiles();
+    } catch (err) {
+      setDeactivateError(friendlyError(err));
+    } finally {
+      setDeactivating(false);
+    }
+  }
+
+  async function handleReactivate(admin) {
+    setBusyId(admin.id);
+    try {
+      await updateAdmin(admin.id, { is_active: true });
+      await loadProfiles();
+      toast.success(`Akun "${admin.name}" diaktifkan kembali.`);
+    } catch (err) {
+      toast.error(friendlyError(err));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function closePerm() {
+    if (permDeleting) return;
+    setPermTarget(null);
+    setPermError("");
+    setPermPassword("");
+  }
+
+  // Hapus permanen akun nonaktif (password superadmin diperiksa di BE)
+  async function handleConfirmPerm() {
+    setPermDeleting(true);
+    setPermError("");
+    try {
+      await deleteAdmin(permTarget.id, permPassword);
+      toast.success(`Akun "${permTarget.name}" dihapus permanen.`);
+      setPermTarget(null);
+      setPermPassword("");
+      await loadProfiles();
+    } catch (err) {
+      setPermError(friendlyError(err));
+    } finally {
+      setPermDeleting(false);
+    }
+  }
+
+
+  return (
+    <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
+      <div className="mx-auto min-h-[600px] w-full max-w-7xl rounded-xl bg-white px-12 pb-10 pt-8 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-gray-900">Kelola Admin</h1>
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 rounded-md bg-[#1BA3BA] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0]"
+          >
+            <Plus size={16} /> Tambah Admin
+          </button>
+        </div>
+
+        <div className="mb-6 mt-4 h-[3px] rounded bg-gray-300" />
+
+        {loading ? (
+          <p className="py-12 text-center text-sm text-gray-400">Memuat data admin...</p>
+        ) : loadError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center">
+            <p className="text-sm text-red-600">{loadError}</p>
+            <button
+              onClick={() => { setLoading(true); loadProfiles(); }}
+              className="mt-3 rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-100"
+            >
+              Coba lagi
+            </button>
+          </div>
+        ) : admins.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <div className="flex flex-col gap-6">
+            {activeAdmins.length > 0 ? (
+              <AdminTable
+                admins={activeAdmins}
+                onEdit={openEdit}
+                onDelete={setDeactivateTarget}
+                onReactivate={handleReactivate}
+                busyId={busyId}
+              />
+            ) : (
+              <EmptyState message="Tidak ada admin aktif" />
+            )}
+
+            {/* Akun nonaktif selalu tampil di bawah, dipisah garis + judul kecil */}
+            {inactiveAdmins.length > 0 && (
+              <>
+                <SectionDivider>Akun nonaktif ({inactiveAdmins.length})</SectionDivider>
+                <AdminTable
+                  admins={inactiveAdmins}
+                  onEdit={openEdit}
+                  onDelete={setDeactivateTarget}
+                  onReactivate={handleReactivate}
+                  onDeletePermanent={setPermTarget} 
+                  busyId={busyId}
+                />
+              </>
+            )}
+          </div>
+        )}
+      </div>
+
+      <AdminFormModal
+        open={modalOpen}
+        onClose={closeForm}
+        onSave={handleSave}
+        initialData={editing}
+      />
+
+      <ConfirmDialog
+        open={!!deactivateTarget}
+        onClose={closeDeactivate}
+        onConfirm={handleConfirmDeactivate}
+        title="Nonaktifkan Akun Admin"
+        icon={UserX}
+        confirmLabel="Nonaktifkan"
+        loading={deactivating}
+        error={deactivateError}
+      >
+        <p>Akun admin</p>
+        <p className="my-1 text-base font-semibold uppercase tracking-wide text-gray-900">
+          {deactivateTarget?.name}
+        </p>
+        {deactivateTarget?.region && (
+          <p className="text-xs text-gray-500">{deactivateTarget.region}</p>
+        )}
+        <p className="mt-3">akan dinonaktifkan dan tidak bisa login lagi.</p>
+        <p className="mt-1 text-xs text-gray-400">
+          Data pospam tetap tersimpan, dan akun bisa diaktifkan kembali kapan saja.
+        </p>
+      </ConfirmDialog>
+
+      {/* konfirmasi hapus permanen (ketik nama polres) */}
+            <ConfirmDialog
+        open={!!permTarget}
+        onClose={closePerm}
+        onConfirm={handleConfirmPerm}
+        title="Hapus Permanen Akun Admin"
+        confirmLabel="Hapus permanen"
+        loading={permDeleting}
+        error={permError}
+        confirmDisabled={!permPassword}
+      >
+        <p>Akun</p>
+        <p className="my-1 text-base font-semibold uppercase tracking-wide text-gray-900">
+          {permTarget?.name}
+        </p>
+        <p className="mt-2">
+          beserta seluruh pospam dan nomor darurat wilayahnya akan dihapus permanen dan tidak
+          bisa dikembalikan.
+        </p>
+        <p className="mt-3 text-xs text-gray-500">
+          Masukkan password Anda sebagai superadmin untuk melanjutkan:
+        </p>
+        <div className="mt-2 text-left">
+          <PasswordInput
+            value={permPassword}
+            onChange={(e) => setPermPassword(e.target.value)}
+            autoComplete="new-password"
+            placeholder="Password Superadmin"
+          />
+        </div>
+      </ConfirmDialog>
+
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/app/superadmin/nomor-nasional/page.jsx">
+// src/app/superadmin/nomor-nasional/page.jsx
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
+import NomorNasionalTable from "@/components/superadmin/NomorNasionalTable";
+import NomorNasionalFormModal from "@/components/superadmin/NomorNasionalFormModal";
+import EmptyState from "@/components/superadmin/EmptyState";
+import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
+import {
+  getNomorNasionalAll,
+  createNomorNasional,
+  updateNomorNasional,
+  deleteNomorNasional,
+} from "@/lib/api";
+import { uploadNomorIcon } from "@/lib/uploadIcon";
+import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
+
+// Data BE (tabel nomor_darurat) -> bentuk yang dipakai komponen UI
+const fromApi = (r) => ({
+  id: r.id,
+  nama: r.agency_name,
+  nomor: r.telephone,
+  logoUrl: r.icon,
+});
+
+export default function NomorNasionalPage() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editData, setEditData] = useState(null);
+
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const { toasts, toast, dismiss } = useToast(); // ← diubah (menggantikan state notice)
+
+  const load = useCallback(async () => {
+    setLoadError("");
+    try {
+      const rows = await getNomorNasionalAll();
+      setData((rows ?? []).map(fromApi));
+    } catch (err) {
+      setLoadError(err.message || "Gagal memuat nomor nasional");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function openAdd() {
+    setEditData(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(item) {
+    setEditData(item);
+    setModalOpen(true);
+  }
+
+  function closeForm() {
+    setModalOpen(false);
+  }
+
+  function closeDelete() {
+    setDeleteTarget(null);
+    setDeleteError("");
+  }
+
+  // Dipanggil NomorNasionalFormModal. Kalau melempar error, modal tetap terbuka dan menampilkannya.
+  async function handleSave(item) {
+    // Ikon baru (kalau ada) diunggah dulu; kalau tidak ada file baru, ikon lama tidak disentuh
+    const iconUrl = item.logoFile ? await uploadNomorIcon(item.logoFile) : null;
+
+    if (item.id) {
+      const lama = data.find((d) => d.id === item.id);
+      const changes = {};
+      if (item.nama !== lama?.nama) changes.agency_name = item.nama;
+      if (item.nomor !== lama?.nomor) changes.telephone = item.nomor;
+      if (iconUrl) changes.icon = iconUrl;
+      if (Object.keys(changes).length > 0) await updateNomorNasional(item.id, changes);
+    } else {
+      await createNomorNasional({
+        agency_name: item.nama,
+        telephone: item.nomor,
+        ...(iconUrl ? { icon: iconUrl } : {}),
+      });
+    }
+
+    await load();
+    toast.success( // ← diubah
+      item.id ? `Nomor "${item.nama}" diperbarui.` : `Nomor "${item.nama}" ditambahkan.`
+    );
+  }
+
+  // Hapus permanen (tabel nomor_darurat tidak punya kolom is_active)
+  async function handleConfirmDelete() {
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await deleteNomorNasional(deleteTarget.id);
+      toast.success(`Nomor "${deleteTarget.nama}" dihapus.`); // ← diubah
+      closeDelete();
+      await load();
+    } catch (err) {
+      setDeleteError(err.message || "Gagal menghapus nomor");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
+      <div className="mx-auto min-h-[600px] w-full max-w-7xl rounded-xl bg-white px-12 pb-10 pt-8 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-gray-900">Nomor Nasional</h1>
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 rounded-md bg-[#1BA3BA] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0]"
+          >
+            <Plus size={16} /> Tambah Nomor Nasional
+          </button>
+        </div>
+
+        <div className="mb-6 mt-4 h-[3px] rounded bg-gray-300" />
+
+        {loading ? (
+          <p className="py-12 text-center text-sm text-gray-400">Memuat nomor nasional...</p>
+        ) : loadError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-6 text-center">
+            <p className="text-sm text-red-600">{loadError}</p>
+            <button
+              onClick={() => { setLoading(true); load(); }}
+              className="mt-3 rounded-md border border-red-300 px-4 py-1.5 text-sm text-red-600 transition-colors hover:bg-red-100"
+            >
+              Coba lagi
+            </button>
+          </div>
+        ) : data.length === 0 ? (
+          <EmptyState message="Belum ada nomor nasional" />
+        ) : (
+          <NomorNasionalTable
+            data={data}
+            onEdit={openEdit}
+            onDelete={(id) => setDeleteTarget(data.find((d) => d.id === id) ?? null)}
+          />
+        )}
+      </div>
+
+      <NomorNasionalFormModal
+        open={modalOpen}
+        onClose={closeForm}
+        onSave={handleSave}
+        editData={editData}
+      />
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onClose={closeDelete}
+        onConfirm={handleConfirmDelete}
+        title="Hapus Nomor Nasional"
+        icon={Trash2}
+        confirmLabel="Hapus"
+        loading={deleting}
+        error={deleteError}
+      >
+        <p>Yakin ingin menghapus nomor</p>
+        <p className="my-1 text-base font-semibold uppercase tracking-wide text-gray-900">
+          {deleteTarget?.nama}
+        </p>
+        {deleteTarget?.nomor && <p className="text-xs text-gray-500">{deleteTarget.nomor}</p>}
+        <p className="mt-3 text-xs text-gray-400">Tindakan ini tidak dapat dibatalkan.</p>
+      </ConfirmDialog>
+
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />{/* ← diubah (ditambahkan) */}
+    </div>
+  );
+}
+</file>
+
 <file path="frontend/src/components/admin/MapPicker.jsx">
 "use client";
 
@@ -7170,385 +7073,333 @@ export default function Navbar({ title, items, badge }) {
 }
 </file>
 
-<file path="frontend/src/components/superadmin/AdminFormModal.jsx">
-// src/components/superadmin/AdminFormModal.jsx
-"use client";
-import { useEffect, useRef, useState } from "react";
-import Modal, { setUnsavedHandler } from "@/components/shared/ui/Modal";
-import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
-import PasswordInput from "@/components/shared/ui/PasswordInput";
+<file path="frontend/src/components/superadmin/AdminTable.jsx">
+// src/components/superadmin/AdminTable.jsx
+import { Mail, Pencil, RotateCcw, Trash2 } from "lucide-react";
 
-const labelClass = "mb-1.5 block text-sm font-medium text-gray-700";
-const inputClass =
-  "w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-[#1BA3BA] focus:ring-1 focus:ring-[#1BA3BA]";
-
-export default function AdminFormModal({ open, onClose, onSave, initialData = null }) {
-  const isEdit = !!initialData;
-  const [name, setName] = useState("");
-  const [region, setRegion] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const pendingRef = useRef(null); // aksi tertunda (mis. pindah menu) sampai pengguna memutuskan
-
-  // Isi form saat dibuka: data admin kalau edit, kosong kalau tambah baru
-  useEffect(() => {
-    if (open) {
-      setName(initialData?.name ?? "");
-      setRegion(initialData?.region ?? "");
-      setEmail(initialData?.email ?? "");
-      setPassword("");
-      setError("");
-      setSaving(false);
-      setConfirmOpen(false);
-      pendingRef.current = null;
-    }
-  }, [open, initialData]);
-
-  // Ada isian yang berubah dibanding saat dialog dibuka?
-  const dirty =
-    name !== (initialData?.name ?? "") ||
-    region !== (initialData?.region ?? "") ||
-    email !== (initialData?.email ?? "") ||
-    password !== "";
-
-  // Selama ada perubahan, daftarkan penjaga: klik menu navbar akan minta konfirmasi dulu
-  useEffect(() => {
-    if (!open || !dirty || saving) return;
-    setUnsavedHandler((proceed) => {
-      pendingRef.current = proceed;
-      setConfirmOpen(true);
-    });
-    return () => setUnsavedHandler(null);
-  }, [open, dirty, saving]);
-
-  // Klik area luar / Batal / Esc
-  function requestClose() {
-    if (saving) return;
-    if (dirty) {
-      setConfirmOpen(true);
-      return;
-    }
-    onClose();
-  }
-
-  function keepEditing() {
-    pendingRef.current = null;
-    setConfirmOpen(false);
-  }
-
-  function discardChanges() {
-    const next = pendingRef.current;
-    pendingRef.current = null;
-    setConfirmOpen(false);
-    onClose();
-    next?.(); // lanjutkan pindah menu kalau sebelumnya ada yang tertunda
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
-    try {
-      await onSave({
-        name: name.trim(),
-        region: region.trim(),
-        email: email.trim(),
-        password,
-      });
-      onClose(); // hanya menutup kalau berhasil
-    } catch (err) {
-      setError(err.message || "Gagal menyimpan data");
-    } finally {
-      setSaving(false);
-    }
-  }
-
+export default function AdminTable({ admins, onEdit, onDelete, onReactivate, onDeletePermanent, busyId }) {
   return (
-    <>
-      <Modal
-        open={open}
-        // Esc diabaikan selagi dialog konfirmasi terbuka
-        onClose={confirmOpen ? undefined : requestClose}
-        title={isEdit ? "Edit Akun Admin" : "Tambah Akun Admin"}
-      >
-        <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
-          <div>
-            <label className={labelClass}>Nama Polres</label>
-            <input
-              required
-              name="nama-polres"
-              autoComplete="off"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Mis. Polres Demak"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Wilayah</label>
-            <input
-              required
-              name="wilayah"
-              autoComplete="off"
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-              placeholder="Mis. Kabupaten Demak"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Email</label>
-            <input
-              type="email"
-              required
-              name="admin-email"
-              autoComplete="off"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Mis. polresdemak@gmail.com"
-              className={inputClass}
-            />
-          </div>
-
-          {/* Password hanya saat tambah baru: BE tidak menerima perubahan password lewat edit */}
-          {!isEdit && (
-            <div>
-              <label className={labelClass}>Password</label>
-              <PasswordInput
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
-                placeholder="************"
-              />
-              <p className="mt-1.5 text-xs text-gray-400">
-                Minimal 8 karakter. Admin diminta menggantinya saat login pertama.
+    <div className="flex flex-col gap-3">
+      {admins.map((a) => {
+        const inactive = a.is_active === false;
+        return (
+          <div
+            key={a.id}
+            className={`flex items-center justify-between rounded-lg border px-6 py-4 shadow-sm transition-shadow hover:shadow-md ${
+              inactive ? "border-gray-200 bg-gray-100/70" : "border-gray-100 bg-[#F8F8FA]"
+            }`}
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-3">
+                <p
+                  className={`truncate text-base font-semibold uppercase tracking-wide ${
+                    inactive ? "text-gray-400" : "text-gray-900"
+                  }`}
+                >
+                  {a.name}
+                </p>
+                {a.region && (
+                  <span className="shrink-0 rounded-full bg-[#1BA3BA]/10 px-2.5 py-0.5 text-[11px] font-medium text-[#158aa0]">
+                    {a.region}
+                  </span>
+                )}
+                {inactive && (
+                  <span className="shrink-0 rounded-full bg-gray-200 px-2.5 py-0.5 text-[11px] font-medium text-gray-600">
+                    Nonaktif
+                  </span>
+                )}
+              </div>
+              <p
+                className={`mt-1 flex items-center gap-2 text-sm ${
+                  inactive ? "text-gray-400" : "text-gray-500"
+                }`}
+              >
+                <Mail size={15} className="shrink-0" />
+                <span className="truncate">{a.email}</span>
               </p>
             </div>
-          )}
 
-          {error && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-center text-xs text-red-600">
-              {error}
+            <div className="ml-4 flex shrink-0 gap-2">
+              {inactive ? (
+                <>
+                  <button
+                    onClick={() => onReactivate(a)}
+                    disabled={busyId === a.id}
+                    className="flex items-center gap-2 rounded-md border border-[#1BA3BA] px-3.5 py-2 text-sm font-medium text-[#1BA3BA] transition-colors hover:bg-[#1BA3BA] hover:text-white disabled:opacity-50"
+                  >
+                    <RotateCcw size={15} />
+                    {busyId === a.id ? "Memproses..." : "Aktifkan kembali"}
+                  </button>
+                  <button
+                    onClick={() => onDeletePermanent?.(a)}
+                    aria-label={`Hapus permanen ${a.name}`}
+                    title="Hapus permanen"
+                    className="flex h-9 w-9 items-center justify-center rounded-md border border-red-300 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => onEdit(a)}
+                    aria-label={`Edit ${a.name}`}
+                    title="Edit"
+                    className="flex h-9 w-9 items-center justify-center rounded-md bg-[#1BA3BA] text-white shadow-sm transition-colors hover:bg-[#158aa0]"
+                  >
+                    <Pencil size={17} />
+                  </button>
+                  <button
+                    onClick={() => onDelete(a)}
+                    aria-label={`Nonaktifkan ${a.name}`}
+                    title="Nonaktifkan"
+                    className="flex h-9 w-9 items-center justify-center rounded-md bg-[#1BA3BA] text-white shadow-sm transition-colors hover:bg-red-600"
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </>
+              )}
             </div>
-          )}
-
-{/* tambahkan border */}
-          <div className="mt-3 flex justify-flex gap-3">
-            <button
-              type="button"
-              onClick={requestClose}
-              disabled={saving}
-              className="min-w-[120px] flex-1 rounded-md border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="min-w-[120px] flex-1 rounded-md bg-[#1a9fb8] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0] disabled:opacity-50"
-            >
-              {saving ? "Menyimpan..." : "Simpan"}
-            </button>
           </div>
-        </form>
-      </Modal>
-
-      <ConfirmDialog
-        open={open && confirmOpen}
-        onClose={keepEditing}
-        onConfirm={discardChanges}
-        title="Buang perubahan?"
-        confirmLabel="Buang perubahan"
-        cancelLabel="Lanjut mengedit"
-      >
-        Perubahan yang belum disimpan akan hilang.
-      </ConfirmDialog>
-    </>
+        );
+      })}
+    </div>
   );
 }
 </file>
 
-<file path="frontend/src/components/superadmin/NomorNasionalFormModal.jsx">
-// src/components/superadmin/NomorNasionalFormModal.jsx
-"use client";
-import { useState, useEffect, useRef } from "react";
-import Modal, { setUnsavedHandler } from "@/components/shared/ui/Modal";
-import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
-import ImageUploadInput from "@/components/shared/ui/ImageUploadInput";
+<file path="frontend/next.config.mjs">
+/** @type {import('next').NextConfig} */
+ const nextConfig = { 
+   allowedDevOrigins: ["192.168.66.239"]
+ };
 
-const labelClass = "mb-1.5 block text-sm font-medium text-gray-700";
-const inputClass =
-  "w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-[#1BA3BA] focus:ring-1 focus:ring-[#1BA3BA]";
+export default nextConfig;
+</file>
 
-export default function NomorNasionalFormModal({ open, onClose, onSave, editData }) {
-  const [nama, setNama] = useState("");
-  const [nomor, setNomor] = useState("");
-  const [logoUrl, setLogoUrl] = useState(null);
-  const [logoFile, setLogoFile] = useState(null);
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const pendingRef = useRef(null); // aksi tertunda (mis. pindah menu) sampai pengguna memutuskan
+<file path="backend/src/controller/adminController.js">
+import { supabase, supabaseAdmin, createStatelessClient, BUCKET_FOTO } from "../config/supabase.js";
+import { HttpError, wrap } from "../utils/http.js";
 
-  useEffect(() => {
-    setNama(editData?.nama || "");
-    setNomor(editData?.nomor || "");
-    setLogoUrl(editData?.logoUrl || null);
-    setLogoFile(null);
-    setError("");
-    setSaving(false);
-    setConfirmOpen(false);
-    pendingRef.current = null;
-  }, [editData, open]);
-
-  // Ada isian yang berubah dibanding saat dialog dibuka?
-  const dirty =
-    nama !== (editData?.nama || "") ||
-    nomor !== (editData?.nomor || "") ||
-    logoUrl !== (editData?.logoUrl || null) ||
-    logoFile !== null;
-
-  // Selama ada perubahan, daftarkan penjaga: klik menu navbar akan minta konfirmasi dulu
-  useEffect(() => {
-    if (!open || !dirty || saving) return;
-    setUnsavedHandler((proceed) => {
-      pendingRef.current = proceed;
-      setConfirmOpen(true);
-    });
-    return () => setUnsavedHandler(null);
-  }, [open, dirty, saving]);
-
-  // Klik area luar / Batal / Esc
-  function requestClose() {
-    if (saving) return;
-    if (dirty) {
-      setConfirmOpen(true);
-      return;
-    }
-    onClose();
+// Helper penanganan error Supabase Auth
+function errorAuth(error) {
+  const pesan = (error.message || "").toLowerCase();
+  if (error.status === 422 || pesan.includes("already")) {
+    return new HttpError(409, "Email sudah terdaftar");
   }
-
-  function keepEditing() {
-    pendingRef.current = null;
-    setConfirmOpen(false);
+  if (pesan.includes("password")) {
+    return new HttpError(400, "Password tidak memenuhi syarat");
   }
-
-  function discardChanges() {
-    const next = pendingRef.current;
-    pendingRef.current = null;
-    setConfirmOpen(false);
-    onClose();
-    next?.(); // lanjutkan pindah menu kalau sebelumnya ada yang tertunda
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
-    try {
-      await onSave({
-        id: editData?.id,
-        nama: nama.trim(),
-        nomor: nomor.trim(),
-        logoUrl,
-        logoFile,
-      });
-      onClose(); // hanya menutup kalau berhasil
-    } catch (err) {
-      setError(err.message || "Gagal menyimpan data");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <>
-      <Modal
-        open={open}
-        // Esc diabaikan selagi dialog konfirmasi terbuka
-        onClose={confirmOpen ? undefined : requestClose}
-        title={editData ? "Edit Nomor" : "Tambah Nomor Nasional"}
-      >
-        <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
-          <div>
-            <label className={labelClass}>Ikon Instansi</label>
-            <ImageUploadInput
-              value={logoUrl}
-              onChange={(file, previewUrl) => { setLogoFile(file); setLogoUrl(previewUrl); }}
-            />
-            <p className="mt-1.5 text-xs text-gray-400">JPG, PNG, atau WebP, maksimal 3 MB.</p>
-          </div>
-          <div>
-            <label className={labelClass}>Nama Instansi</label>
-            <input
-              required
-              maxLength={150}
-              autoComplete="off"
-              value={nama}
-              onChange={(e) => setNama(e.target.value)}
-              placeholder="Mis. Layanan Polisi"
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className={labelClass}>Nomor</label>
-            <input
-              required
-              maxLength={25}
-              inputMode="tel"
-              autoComplete="off"
-              value={nomor}
-              onChange={(e) => setNomor(e.target.value)}
-              placeholder="Mis. 110"
-              className={inputClass}
-            />
-            <p className="mt-1.5 text-xs text-gray-400">
-              Hanya angka, +, -, spasi, dan tanda kurung.
-            </p>
-          </div>
-
-          {error && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-center text-xs text-red-600">
-              {error}
-            </div>
-          )}
-
-          <div className="mt-3 flex justify-flex gap-3 ">
-            <button
-              type="button"
-              onClick={requestClose}
-              disabled={saving}
-              className="min-w-[120px] flex-1 rounded-md border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="min-w-[120px] flex-1 rounded-md bg-[#1a9fb8] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0] disabled:opacity-50"
-            >
-              {saving ? "Menyimpan..." : "Simpan"}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      <ConfirmDialog
-        open={open && confirmOpen}
-        onClose={keepEditing}
-        onConfirm={discardChanges}
-        title="Buang perubahan?"
-        confirmLabel="Buang perubahan"
-        cancelLabel="Lanjut mengedit"
-      >
-        Perubahan yang belum disimpan akan hilang.
-      </ConfirmDialog>
-    </>
-  );
+  return error;
 }
+
+async function ambilAdmin(id) {
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("id, name, email, role, region, is_active, must_change_password, created_at")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) throw new HttpError(404, "Akun admin tidak ditemukan");
+  return data;
+}
+
+// 1. Daftar seluruh akun admin (dengan pencarian nama/email/region)
+export const listAdmin = wrap(async (req, res) => {
+  const { q } = req.valid.query;
+
+  let query = supabaseAdmin
+    .from("profiles")
+    .select("id, name, email, role, region, is_active, created_at")
+    .order("created_at", { ascending: false });
+
+  if (q) {
+    const aman = q.replace(/[%_\\]/g, " ");
+    query = query.or(`name.ilike.%${aman}%,email.ilike.%${aman}%,region.ilike.%${aman}%`);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  res.json({ data });
+});
+
+// 2. Buat akun admin baru (oleh Superadmin)
+export const createAdmin = wrap(async (req, res) => {
+  const { name, email, password, region, role = "admin_wilayah" } = req.valid.body;
+
+  // Gunakan supabaseAdmin (bukan supabase biasa)
+  const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  });
+
+  if (authErr) throw errorAuth(authErr);
+
+  // Simpan profil di tabel profiles pakai client biasa/admin
+  const { error: errProfil } = await supabaseAdmin.from("profiles").insert({
+    id: authData.user.id,
+    name,
+    email,
+    region,
+    role,
+    is_active: true,
+    must_change_password: true,
+  });
+
+  // Rollback pakai supabaseAdmin jika simpan profil gagal
+  if (errProfil) {
+    await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
+    throw errProfil;
+  }
+
+  res.status(201).json({
+    message: "Akun admin berhasil dibuat",
+    data: {
+      id: authData.user.id,
+      name,
+      email,
+      region,
+      role,
+      is_active: true,
+    },
+  });
+});
+
+// 3. Perbarui data admin / ubah status aktif
+export const updateAdmin = wrap(async (req, res) => {
+  const { id } = req.valid.params;
+  const { name, email, region, role, is_active } = req.valid.body;
+
+  const targetAdmin = await ambilAdmin(id); // Memastikan ID ada
+
+  if (role != undefined && targetAdmin.role === "super_admin" && role !== "super_admin") {
+    const { count, error: countError } = await supabaseAdmin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "super_admin");
+    
+    if (countError) throw countError;
+
+    if (count <= 1) {
+      throw new HttpError(400, "Aksi ditolak. Tidak dapat mengubah role Super Admin!");
+    }
+  }
+
+  // Update email di Supabase Auth jika berubah
+  if (email !== undefined) {
+    const { error: errAuth } = await supabaseAdmin.auth.admin.updateUserById(id, {
+      email,
+      email_confirm: true,
+    });
+    if (errAuth) throw errorAuth(errAuth);
+  }
+
+  const ubahProfil = {};
+  if (name !== undefined) ubahProfil.name = name;
+  if (email !== undefined) ubahProfil.email = email;
+  if (region !== undefined) ubahProfil.region = region;
+  if (role !== undefined) ubahProfil.role = role;
+  if (is_active !== undefined) ubahProfil.is_active = is_active;
+
+  if (Object.keys(ubahProfil).length > 0) {
+    const { error } = await supabaseAdmin.from("profiles").update(ubahProfil).eq("id", id);
+    if (error) throw error;
+  }
+
+  res.json({
+    message: "Data admin berhasil diperbarui",
+    data: await ambilAdmin(id),
+  });
+});
+
+// 4. Hapus akun admin
+// export const deleteAdmin = wrap(async (req, res) => {
+//   const { id } = req.valid.params;
+  
+//   const targetAdmin = await ambilAdmin(id);
+
+//   if (targetAdmin.role === "super_admin") {
+//     const { count, error: countError } = await supabaseAdmin
+//       .from("profiles")
+//       .select("*", { count: "exact", head: true })
+//       .eq("role", "super_admin");
+    
+//     if (countError) throw countError;
+
+//     if (count <= 1) {
+//       throw new HttpError(400, "Aksi ditolak. Setidaknya ada satu Super Admin yang terdaftar!");
+//     }
+//   }
+
+//   const { error } = await supabaseAdmin.auth.admin.deleteUser(id); // Profil ikut terhapus otomatis (cascade)
+//   if (error) throw error;
+
+//   res.json({ message: "Akun admin berhasil dihapus" });
+// });
+
+// 4. Hapus permanen akun admin nonaktif beserta data wilayahnya
+export const deleteAdmin = wrap(async (req, res) => {
+  const { id } = req.valid.params;
+  const { password } = req.valid.body;
+
+  // Konfirmasi: password superadmin yang sedang login
+  const { error: errPw } = await createStatelessClient().auth.signInWithPassword({
+    email: req.user.email,
+    password,
+  });
+  if (errPw) {
+    if (errPw.status === 429) {
+      throw new HttpError(429, "Terlalu banyak percobaan. Coba lagi beberapa menit lagi");
+    }
+    throw new HttpError(400, "Password salah");
+  }
+
+  const admin = await ambilAdmin(id);
+
+  if (id === req.user.id) throw new HttpError(400, "Tidak bisa menghapus akun sendiri");
+  if (admin.role === "super_admin") throw new HttpError(400, "Akun superadmin tidak bisa dihapus dari sini");
+  if (admin.region === "NASIONAL") throw new HttpError(400, "Wilayah NASIONAL tidak boleh dihapus");
+  if (admin.is_active !== false) throw new HttpError(400, "Nonaktifkan akun terlebih dahulu");
+
+  const bucket = BUCKET_FOTO || "pospam-photos";
+  const marker = `/${bucket}/`;
+
+  if (admin.region) {
+    // Kumpulkan path foto dulu sebelum barisnya dihapus
+    const { data: pos } = await supabaseAdmin.from("pospam").select("photo").eq("region", admin.region);
+    const fotoPaths = (pos ?? [])
+      .flatMap((p) => (Array.isArray(p.photo) ? p.photo : []))
+      .map((u) => {
+        const i = String(u).indexOf(marker);
+        return i >= 0 ? decodeURIComponent(String(u).slice(i + marker.length).split("?")[0]) : null;
+      })
+      .filter(Boolean);
+
+    // Hapus data wilayah ini
+    const { error: e1 } = await supabaseAdmin.from("pospam").delete().eq("region", admin.region);
+    if (e1) throw e1;
+    const { error: e2 } = await supabaseAdmin.from("nomor_darurat").delete().eq("region", admin.region);
+    if (e2) throw e2;
+
+    // Bersihkan foto (tidak menggagalkan penghapusan akun kalau gagal)
+    if (fotoPaths.length) {
+      const { error: eFoto } = await supabaseAdmin.storage.from(bucket).remove(fotoPaths);
+      if (eFoto) console.error("Gagal menghapus foto:", eFoto.message);
+    }
+  }
+
+  // Profil dan akun Auth
+  const { error: e3 } = await supabaseAdmin.from("profiles").delete().eq("id", id);
+  if (e3) throw e3;
+
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+  if (error) throw error;
+
+  res.json({ message: "Akun admin berhasil dihapus" });
+});
 </file>
 
 <file path="backend/src/controller/pospamController.js">
@@ -8401,6 +8252,387 @@ export default function PospamPage() {
 }
 </file>
 
+<file path="frontend/src/components/superadmin/AdminFormModal.jsx">
+// src/components/superadmin/AdminFormModal.jsx
+"use client";
+import { useEffect, useRef, useState } from "react";
+import Modal, { setUnsavedHandler } from "@/components/shared/ui/Modal";
+import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
+import PasswordInput from "@/components/shared/ui/PasswordInput";
+
+const labelClass = "mb-1.5 block text-sm font-medium text-gray-700";
+const inputClass =
+  "w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-[#1BA3BA] focus:ring-1 focus:ring-[#1BA3BA]";
+
+export default function AdminFormModal({ open, onClose, onSave, initialData = null }) {
+  const isEdit = !!initialData;
+  const [name, setName] = useState("");
+  const [region, setRegion] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const pendingRef = useRef(null); // aksi tertunda (mis. pindah menu) sampai pengguna memutuskan
+
+  // Isi form saat dibuka: data admin kalau edit, kosong kalau tambah baru
+  useEffect(() => {
+    if (open) {
+      setName(initialData?.name ?? "");
+      setRegion(initialData?.region ?? "");
+      setEmail(initialData?.email ?? "");
+      setPassword("");
+      setError("");
+      setSaving(false);
+      setConfirmOpen(false);
+      pendingRef.current = null;
+    }
+  }, [open, initialData]);
+
+  // Ada isian yang berubah dibanding saat dialog dibuka?
+  const dirty =
+    name !== (initialData?.name ?? "") ||
+    region !== (initialData?.region ?? "") ||
+    email !== (initialData?.email ?? "") ||
+    password !== "";
+
+  // Selama ada perubahan, daftarkan penjaga: klik menu navbar akan minta konfirmasi dulu
+  useEffect(() => {
+    if (!open || !dirty || saving) return;
+    setUnsavedHandler((proceed) => {
+      pendingRef.current = proceed;
+      setConfirmOpen(true);
+    });
+    return () => setUnsavedHandler(null);
+  }, [open, dirty, saving]);
+
+  // Klik area luar / Batal / Esc
+  function requestClose() {
+    if (saving) return;
+    if (dirty) {
+      setConfirmOpen(true);
+      return;
+    }
+    onClose();
+  }
+
+  function keepEditing() {
+    pendingRef.current = null;
+    setConfirmOpen(false);
+  }
+
+  function discardChanges() {
+    const next = pendingRef.current;
+    pendingRef.current = null;
+    setConfirmOpen(false);
+    onClose();
+    next?.(); // lanjutkan pindah menu kalau sebelumnya ada yang tertunda
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      await onSave({
+        name: name.trim(),
+        region: region.trim(),
+        email: email.trim(),
+        password,
+      });
+      onClose(); // hanya menutup kalau berhasil
+    } catch (err) {
+      setError(err.message || "Gagal menyimpan data");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <Modal
+        open={open}
+        // Esc diabaikan selagi dialog konfirmasi terbuka
+        onClose={confirmOpen ? undefined : requestClose}
+        title={isEdit ? "Edit Akun Admin" : "Tambah Akun Admin"}
+      >
+        <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
+          <div>
+            <label className={labelClass}>Nama Polres</label>
+            <input
+              required
+              name="nama-polres"
+              autoComplete="off"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Mis. Polres Demak"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Wilayah</label>
+            <input
+              required
+              name="wilayah"
+              autoComplete="off"
+              value={region}
+              onChange={(e) => setRegion(e.target.value)}
+              placeholder="Mis. Kabupaten Demak"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Email</label>
+            <input
+              type="email"
+              required
+              name="admin-email"
+              autoComplete="off"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Mis. polresdemak@gmail.com"
+              className={inputClass}
+            />
+          </div>
+
+          {/* Password hanya saat tambah baru: BE tidak menerima perubahan password lewat edit */}
+          {!isEdit && (
+            <div>
+              <label className={labelClass}>Password</label>
+              <PasswordInput
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                placeholder="************"
+              />
+              <p className="mt-1.5 text-xs text-gray-400">
+                Minimal 8 karakter. Admin diminta menggantinya saat login pertama.
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-center text-xs text-red-600">
+              {error}
+            </div>
+          )}
+
+{/* tambahkan border */}
+          <div className="mt-3 flex justify-flex gap-3">
+            <button
+              type="button"
+              onClick={requestClose}
+              disabled={saving}
+              className="min-w-[120px] flex-1 rounded-md border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="min-w-[120px] flex-1 rounded-md bg-[#1a9fb8] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0] disabled:opacity-50"
+            >
+              {saving ? "Menyimpan..." : "Simpan"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={open && confirmOpen}
+        onClose={keepEditing}
+        onConfirm={discardChanges}
+        title="Buang perubahan?"
+        confirmLabel="Buang perubahan"
+        cancelLabel="Lanjut mengedit"
+      >
+        Perubahan yang belum disimpan akan hilang.
+      </ConfirmDialog>
+    </>
+  );
+}
+</file>
+
+<file path="frontend/src/components/superadmin/NomorNasionalFormModal.jsx">
+// src/components/superadmin/NomorNasionalFormModal.jsx
+"use client";
+import { useState, useEffect, useRef } from "react";
+import Modal, { setUnsavedHandler } from "@/components/shared/ui/Modal";
+import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
+import ImageUploadInput from "@/components/shared/ui/ImageUploadInput";
+
+const labelClass = "mb-1.5 block text-sm font-medium text-gray-700";
+const inputClass =
+  "w-full rounded-md border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 outline-none transition-colors focus:border-[#1BA3BA] focus:ring-1 focus:ring-[#1BA3BA]";
+
+export default function NomorNasionalFormModal({ open, onClose, onSave, editData }) {
+  const [nama, setNama] = useState("");
+  const [nomor, setNomor] = useState("");
+  const [logoUrl, setLogoUrl] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const pendingRef = useRef(null); // aksi tertunda (mis. pindah menu) sampai pengguna memutuskan
+
+  useEffect(() => {
+    setNama(editData?.nama || "");
+    setNomor(editData?.nomor || "");
+    setLogoUrl(editData?.logoUrl || null);
+    setLogoFile(null);
+    setError("");
+    setSaving(false);
+    setConfirmOpen(false);
+    pendingRef.current = null;
+  }, [editData, open]);
+
+  // Ada isian yang berubah dibanding saat dialog dibuka?
+  const dirty =
+    nama !== (editData?.nama || "") ||
+    nomor !== (editData?.nomor || "") ||
+    logoUrl !== (editData?.logoUrl || null) ||
+    logoFile !== null;
+
+  // Selama ada perubahan, daftarkan penjaga: klik menu navbar akan minta konfirmasi dulu
+  useEffect(() => {
+    if (!open || !dirty || saving) return;
+    setUnsavedHandler((proceed) => {
+      pendingRef.current = proceed;
+      setConfirmOpen(true);
+    });
+    return () => setUnsavedHandler(null);
+  }, [open, dirty, saving]);
+
+  // Klik area luar / Batal / Esc
+  function requestClose() {
+    if (saving) return;
+    if (dirty) {
+      setConfirmOpen(true);
+      return;
+    }
+    onClose();
+  }
+
+  function keepEditing() {
+    pendingRef.current = null;
+    setConfirmOpen(false);
+  }
+
+  function discardChanges() {
+    const next = pendingRef.current;
+    pendingRef.current = null;
+    setConfirmOpen(false);
+    onClose();
+    next?.(); // lanjutkan pindah menu kalau sebelumnya ada yang tertunda
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      await onSave({
+        id: editData?.id,
+        nama: nama.trim(),
+        nomor: nomor.trim(),
+        logoUrl,
+        logoFile,
+      });
+      onClose(); // hanya menutup kalau berhasil
+    } catch (err) {
+      setError(err.message || "Gagal menyimpan data");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <Modal
+        open={open}
+        // Esc diabaikan selagi dialog konfirmasi terbuka
+        onClose={confirmOpen ? undefined : requestClose}
+        title={editData ? "Edit Nomor" : "Tambah Nomor Nasional"}
+      >
+        <form onSubmit={handleSubmit} autoComplete="off" className="flex flex-col gap-4">
+          <div>
+            <label className={labelClass}>Ikon Instansi</label>
+            <ImageUploadInput
+              value={logoUrl}
+              onChange={(file, previewUrl) => { setLogoFile(file); setLogoUrl(previewUrl); }}
+            />
+            <p className="mt-1.5 text-xs text-gray-400">JPG, PNG, atau WebP, maksimal 3 MB.</p>
+          </div>
+          <div>
+            <label className={labelClass}>Nama Instansi</label>
+            <input
+              required
+              maxLength={150}
+              autoComplete="off"
+              value={nama}
+              onChange={(e) => setNama(e.target.value)}
+              placeholder="Mis. Layanan Polisi"
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Nomor</label>
+            <input
+              required
+              maxLength={25}
+              inputMode="tel"
+              autoComplete="off"
+              value={nomor}
+              onChange={(e) => setNomor(e.target.value)}
+              placeholder="Mis. 110"
+              className={inputClass}
+            />
+            <p className="mt-1.5 text-xs text-gray-400">
+              Hanya angka, +, -, spasi, dan tanda kurung.
+            </p>
+          </div>
+
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-center text-xs text-red-600">
+              {error}
+            </div>
+          )}
+
+          <div className="mt-3 flex justify-flex gap-3 ">
+            <button
+              type="button"
+              onClick={requestClose}
+              disabled={saving}
+              className="min-w-[120px] flex-1 rounded-md border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="min-w-[120px] flex-1 rounded-md bg-[#1a9fb8] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0] disabled:opacity-50"
+            >
+              {saving ? "Menyimpan..." : "Simpan"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={open && confirmOpen}
+        onClose={keepEditing}
+        onConfirm={discardChanges}
+        title="Buang perubahan?"
+        confirmLabel="Buang perubahan"
+        cancelLabel="Lanjut mengedit"
+      >
+        Perubahan yang belum disimpan akan hilang.
+      </ConfirmDialog>
+    </>
+  );
+}
+</file>
+
 <file path="frontend/package.json">
 {
   "name": "frontend",
@@ -8816,6 +9048,10 @@ export const adminUpdateBody = z.object({
   role: z.enum(["super_admin", "admin_wilayah"]).optional(),
   is_active: z.boolean().optional(),
 });
+
+export const adminDeleteBody = z.object({
+  password: z.string().min(1, "Password wajib diisi").max(72),
+});
 </file>
 
 <file path="frontend/src/lib/api.js">
@@ -8889,8 +9125,8 @@ export const createAdmin = (data) =>
   request("/api/admin", { method: "POST", body: JSON.stringify(data) });
 export const updateAdmin = (id, data) =>
   request(`/api/admin/${id}`, { method: "PUT", body: JSON.stringify(data) });
-export const deleteAdmin = (id) =>
-  request(`/api/admin/${id}`, { method: "DELETE" });
+export const deleteAdmin = (id, password) =>
+  request(`/api/admin/${id}`, { method: "DELETE", body: JSON.stringify({ password }) });
 
 // --- Wilayah (GET publik) ---
 export const getWilayahList = () => request("/api/wilayah", { requireAuth: false });

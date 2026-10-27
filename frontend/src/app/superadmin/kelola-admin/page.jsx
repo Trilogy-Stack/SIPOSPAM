@@ -330,7 +330,7 @@ export default function KelolaAdminPage() {
             value={permPassword}
             onChange={(e) => setPermPassword(e.target.value)}
             autoComplete="new-password"
-            placeholder="Password Anda"
+            placeholder="Password Superadmin"
           />
         </div>
       </ConfirmDialog>
