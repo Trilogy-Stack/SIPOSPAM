@@ -68,8 +68,8 @@ export const createAdmin = (data) =>
   request("/api/admin", { method: "POST", body: JSON.stringify(data) });
 export const updateAdmin = (id, data) =>
   request(`/api/admin/${id}`, { method: "PUT", body: JSON.stringify(data) });
-export const deleteAdmin = (id) =>
-  request(`/api/admin/${id}`, { method: "DELETE" });
+export const deleteAdmin = (id, password) =>
+  request(`/api/admin/${id}`, { method: "DELETE", body: JSON.stringify({ password }) });
 
 // --- Wilayah (GET publik) ---
 export const getWilayahList = () => request("/api/wilayah", { requireAuth: false });

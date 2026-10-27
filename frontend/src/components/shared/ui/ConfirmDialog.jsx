@@ -14,6 +14,7 @@ export default function ConfirmDialog({
   cancelLabel = "Batal",
   loading = false,
   error = "",
+  confirmDisabled = false,
   // icon: Icon = AlertTriangle,
 }) {
   return (
@@ -31,18 +32,18 @@ export default function ConfirmDialog({
           </div>
         )}
 
-        <div className="mt-6 flex w-full justify-center gap-3">
+        <div className="mt-6 flex w-full justify-flex gap-3">
           <button
             onClick={onClose}
             disabled={loading}
-            className="min-w-[120px] rounded-md border border-gray-300 px-5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+            className="min-w-[120px] flex-1 rounded-md border border-gray-300 px-5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
           >
             {cancelLabel}
           </button>
           <button
             onClick={onConfirm}
-            disabled={loading}
-            className="min-w-[120px] rounded-md bg-red-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
+            disabled={loading || confirmDisabled}
+            className="min-w-[120px] flex-1 rounded-md bg-[#d9444a] px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#c23a40] disabled:opacity-50"
           >
             {loading ? "Memproses..." : confirmLabel}
           </button>

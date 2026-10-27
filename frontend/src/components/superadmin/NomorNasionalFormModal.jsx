@@ -142,19 +142,19 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
             </div>
           )}
 
-          <div className="mt-3 flex justify-center gap-3">
+          <div className="mt-3 flex justify-flex gap-3 ">
             <button
               type="button"
               onClick={requestClose}
               disabled={saving}
-              className="min-w-[120px] rounded-md border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
+              className="min-w-[120px] flex-1 rounded-md border border-gray-300 px-6 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50"
             >
               Batal
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="min-w-[120px] rounded-md bg-[#0F5BBA] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#0c4a99] disabled:opacity-50"
+              className="min-w-[120px] flex-1 rounded-md bg-[#1a9fb8] px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0] disabled:opacity-50"
             >
               {saving ? "Menyimpan..." : "Simpan"}
             </button>
