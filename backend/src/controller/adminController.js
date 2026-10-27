@@ -93,7 +93,20 @@ export const updateAdmin = wrap(async (req, res) => {
   const { id } = req.valid.params;
   const { name, email, region, role, is_active } = req.valid.body;
 
-  await ambilAdmin(id); // Memastikan ID ada
+  const targetAdmin = await ambilAdmin(id); // Memastikan ID ada
+
+  if (role != undefined && targetAdmin.role === "super_admin" && role !== "super_admin") {
+    const { count, error: countError } = await supabaseAdmin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "super_admin");
+    
+    if (countError) throw countError;
+
+    if (count <= 1) {
+      throw new HttpError(400, "Aksi ditolak. Tidak dapat mengubah role Super Admin!");
+    }
+  }
 
   // Update email di Supabase Auth jika berubah
   if (email !== undefined) {
@@ -125,7 +138,21 @@ export const updateAdmin = wrap(async (req, res) => {
 // 4. Hapus akun admin
 export const deleteAdmin = wrap(async (req, res) => {
   const { id } = req.valid.params;
-  await ambilAdmin(id);
+  
+  const targetAdmin = await ambilAdmin(id);
+
+  if (targetAdmin.role === "super_admin") {
+    const { count, error: countError } = await supabaseAdmin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "super_admin");
+    
+    if (countError) throw countError;
+
+    if (count <= 1) {
+      throw new HttpError(400, "Aksi ditolak. Setidaknya ada satu Super Admin yang terdaftar!");
+    }
+  }
 
   const { error } = await supabaseAdmin.auth.admin.deleteUser(id); // Profil ikut terhapus otomatis (cascade)
   if (error) throw error;
