@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useUnsavedChanges, UNSAVED_MESSAGE } from "@/hooks/useUnsavedChanges";
 import Image from "next/image";
 import {
   Plus,
@@ -21,16 +20,16 @@ import {
   updateEmergency,
   deleteEmergency,
 } from "@/lib/api";
-
 import RegionPicker, {
   EMPTY_REGION,
   formatRegion,
   regionToQueries,
-  parseRegion
+  parseRegion,
 } from "@/components/admin/RegionPicker";
 import MapPicker from "@/components/admin/MapPicker";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnsavedChanges, UNSAVED_MESSAGE } from "@/hooks/useUnsavedChanges";
 import { getRegionScope } from "@/lib/regionScope";
 import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
 
@@ -42,7 +41,7 @@ const CATEGORY_ICON = {
   Keamanan: Siren,
   BBM: Fuel,
   Bengkel: Wrench,
-  Lainnya: PhoneCall
+  Lainnya: PhoneCall,
 };
 
 const toDbCategory = (cat) => (cat ? cat.toLowerCase() : "");
@@ -59,74 +58,82 @@ const emptyForm = {
   lng: null,
 };
 
+const inputClass =
+  "w-full border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
+const labelClass = "block text-xs md:text-sm text-slate-600 font-medium mb-1.5";
+
 export default function KelolaNomorDaruratPage() {
+  const { profile } = useAuth();
+  const { toasts, toast, dismiss } = useToast();
+
   const [list, setList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
   const [mode, setMode] = useState(null); // null | "add" | "edit"
   const [selectedId, setSelectedId] = useState(null);
   const [form, setForm] = useState(emptyForm);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState("");
   const [currentArea, setCurrentArea] = useState("");
+  const [pickedRegion, setPickedRegion] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const { toasts, toast, dismiss } = useToast();
+  const [baseline, setBaseline] = useState("");
 
+  const focus = regionToQueries(pickedRegion);
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const [pickedRegion, setPickedRegion] = useState(null);
-  const focus = regionToQueries(pickedRegion);
-
-const { profile } = useAuth();
-
-useEffect(() => {
-  fetchList();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [profile?.role, profile?.region]);
-
-const fetchList = async () => {
-  const scope = getRegionScope(profile);
-  if (!scope.ready) return;
-
-  if (scope.blocked) {
-    setList([]);
-    setErrorMessage("Akun Anda belum memiliki wilayah. Hubungi super admin.");
-    setLoading(false);
-    return;
-  }
-
-  try {
-    setLoading(true);
-    setErrorMessage("");
-    const res = await getEmergencyApi(scope.params);
-    setList(Array.isArray(res) ? res : res?.data || []);
-  } catch (error) {
-    console.error("Gagal mengambil nomor darurat:", error);
-    setErrorMessage(error.message || "Gagal memuat data.");
-    setList([]);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  // Kategori dipilih satu saja (tampilan checkbox, perilaku seperti radio)
-  const pickCategory = (cat) =>
-    setForm((f) => ({ ...f, category: f.category === cat ? "" : cat }));
-
-  // ---------- Buka form ----------
   // ---------- Peringatan perubahan belum disimpan ----------
-  const snapshot = () =>
-    JSON.stringify({
-      form,
-    });
-  const [baseline, setBaseline] = useState("");
+  const snapshot = () => JSON.stringify({ form });
+  const dirty = !!mode && !!baseline && snapshot() !== baseline;
+
+  useUnsavedChanges(dirty);
+  const confirmLeaveForm = () => !dirty || window.confirm(UNSAVED_MESSAGE);
+
+  // Catat kondisi awal setiap form dibuka atau ditutup
   useEffect(() => {
-    // Setelah form dibuka (tambah / edit), catat kondisi awalnya
     setBaseline(mode ? snapshot() : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, selectedId]);
-  const dirty = !!mode && !!baseline && snapshot() !== baseline;
-  useUnsavedChanges(dirty);
-  const confirmLeaveForm = () => !dirty || window.confirm(UNSAVED_MESSAGE);
+
+  // ---------- Data ----------
+  const fetchList = async () => {
+    const scope = getRegionScope(profile);
+    if (!scope.ready) return;
+
+    if (scope.blocked) {
+      setList([]);
+      setErrorMessage("Akun Anda belum memiliki wilayah. Hubungi super admin.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setErrorMessage("");
+      const res = await getEmergencyApi(scope.params);
+      setList(Array.isArray(res) ? res : res?.data || []);
+    } catch (error) {
+      console.error("Gagal mengambil nomor darurat:", error);
+      setErrorMessage(error.message || "Gagal memuat data.");
+      setList([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.role, profile?.region]);
+
+  // ---------- Form ----------
+  // Kategori hanya boleh satu (tampil seperti checkbox, berperilaku seperti radio)
+  const pickCategory = (cat) =>
+    setForm((f) => ({ ...f, category: f.category === cat ? "" : cat }));
+
+  const closeForm = () => {
+    setMode(null);
+    setSelectedId(null);
+  };
 
   const openAdd = () => {
     if (!confirmLeaveForm()) return;
@@ -142,7 +149,7 @@ const fetchList = async () => {
     setForm({
       name: item.agency_name || "",
       phone: item.telephone || "",
-      region: parseRegion(item.area), // terisi dari wilayah yang tersimpan
+      region: parseRegion(item.area),
       street: item.location || "",
       category: toUiCategory(item.category),
       lat: item.latitude ?? null,
@@ -157,19 +164,16 @@ const fetchList = async () => {
   // ---------- Simpan & Hapus ----------
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (saving) return;
 
     if (!form.category) {
       toast.warning("Pilih salah satu kategori.");
       return;
     }
-
     if (form.phone.length < 10) {
       toast.warning("Nomor minimal 10 angka.");
       return;
     }
-
     if (form.lat == null || form.lng == null) {
       toast.warning("Tentukan lokasi pada peta (klik peta atau geser pin).");
       return;
@@ -177,7 +181,7 @@ const fetchList = async () => {
 
     setSaving(true);
     try {
-      const areaStr = formatRegion(form.region); // kosong jika belum dipilih
+      const areaStr = formatRegion(form.region);
 
       const payload = {
         agency_name: form.name,
@@ -190,10 +194,10 @@ const fetchList = async () => {
       };
 
       if (mode === "add") {
-        // region wajib lolos validasi. Admin wilayah akan ditimpa BE dari akun login.
+        // region wajib lolos validasi; untuk admin wilayah akan ditimpa backend dari akun login
         await createEmergency({
           ...payload,
-          region: form.region?.city || areaStr || "-", // ⚠️ lihat catatan region di bawah
+          region: form.region?.city || areaStr || "-",
         });
       } else {
         await updateEmergency(selectedId, payload); // region sengaja tidak dikirim
@@ -201,8 +205,7 @@ const fetchList = async () => {
 
       const wasAdd = mode === "add";
       await fetchList();
-      setMode(null);
-      setSelectedId(null);
+      closeForm();
       toast.success(
         wasAdd ? "Nomor darurat berhasil ditambahkan." : "Nomor darurat berhasil diperbarui."
       );
@@ -220,8 +223,7 @@ const fetchList = async () => {
     try {
       await deleteEmergency(selectedId);
       await fetchList();
-      setMode(null);
-      setSelectedId(null);
+      closeForm();
       toast.success("Nomor darurat berhasil dihapus.");
     } catch (error) {
       console.error("Gagal menghapus nomor darurat:", error);
@@ -231,14 +233,9 @@ const fetchList = async () => {
     }
   };
 
-  const inputClass =
-    "w-full border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
-  const labelClass = "block text-xs md:text-sm text-slate-600 font-medium mb-1.5";
-
   return (
     <div className="min-h-[calc(100vh-72px)] bg-[#eceef7] font-sans pb-10">
       <main className="w-[calc(100%-3rem)] max-w-7xl mx-auto pt-5 space-y-4">
-        {/* Judul */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="w-17 h-17 relative shrink-0">
@@ -268,7 +265,7 @@ const fetchList = async () => {
         </div>
 
         <div className={mode ? "grid grid-cols-1 lg:grid-cols-2 gap-5 items-start" : ""}>
-          {/* Daftar Nomor Darurat */}
+          {/* Daftar */}
           <div className="space-y-3">
             {loading && (
               <div className="py-45 text-center">
@@ -281,13 +278,15 @@ const fetchList = async () => {
               </div>
             )}
             {!loading && !errorMessage && list.length === 0 && (
-                <div className="py-45 text-center">
-                  <p className="text-base md:text-lg font-semibold text-slate-600">Belum ada data nomor darurat</p>
-                  <p className="text-xs md:text-sm text-slate-500 mt-1">
-                    Klik tombol "Tambah Nomor" untuk menambahkan data pertama.
-                  </p>
-                </div>
-              )}
+              <div className="py-45 text-center">
+                <p className="text-base md:text-lg font-semibold text-slate-600">
+                  Belum ada data nomor darurat
+                </p>
+                <p className="text-xs md:text-sm text-slate-500 mt-1">
+                  Klik tombol "Tambah Nomor" untuk menambahkan data pertama.
+                </p>
+              </div>
+            )}
 
             {list.map((item) => {
               const Icon = CATEGORY_ICON[toUiCategory(item.category)] || Phone;
@@ -325,14 +324,13 @@ const fetchList = async () => {
             >
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-sm md:text-base font-bold text-slate-800">
-                                {mode === "add" ? "Tambah Nomor Darurat" : "Lihat & Edit Nomor Darurat"}
-                              </h2>
+                  {mode === "add" ? "Tambah Nomor Darurat" : "Lihat & Edit Nomor Darurat"}
+                </h2>
                 <button
                   type="button"
                   onClick={() => {
                     if (saving || !confirmLeaveForm()) return;
-                    setMode(null);
-                    setSelectedId(null);
+                    closeForm();
                   }}
                   disabled={saving}
                   aria-label="Tutup form"
@@ -376,19 +374,19 @@ const fetchList = async () => {
 
               <div>
                 <label className={labelClass}>Kabupaten/Kota, Kecamatan</label>
-                  <RegionPicker
-                    required={mode === "add" || !currentArea}
-                    value={form.region}
-                    onChange={(region) => {
-                      setForm((f) => ({ ...f, region }));
-                      setPickedRegion(region);
-                    }}
-                  />
-                  {mode === "edit" && currentArea && !formatRegion(form.region) && (
-                    <p className="text-xs md:text-sm text-slate-600 mt-1.5">
-                      Tersimpan: {currentArea} (pilih ulang hanya jika ingin mengubah)
-                    </p>
-                  )}
+                <RegionPicker
+                  required={mode === "add" || !currentArea}
+                  value={form.region}
+                  onChange={(region) => {
+                    setForm((f) => ({ ...f, region }));
+                    setPickedRegion(region);
+                  }}
+                />
+                {mode === "edit" && currentArea && !formatRegion(form.region) && (
+                  <p className="text-xs md:text-sm text-slate-600 mt-1.5">
+                    Tersimpan: {currentArea} (pilih ulang hanya jika ingin mengubah)
+                  </p>
+                )}
               </div>
 
               <div>
@@ -402,7 +400,6 @@ const fetchList = async () => {
                 />
               </div>
 
-              {/* Peta */}
               <div>
                 <label className={labelClass}>Titik Lokasi di Peta</label>
                 <MapPicker
@@ -415,7 +412,6 @@ const fetchList = async () => {
                 />
               </div>
 
-              {/* Kategori */}
               <div>
                 <label className={labelClass}>Kategori</label>
                 <div className="space-y-3 mt-2">
@@ -436,7 +432,6 @@ const fetchList = async () => {
                 </div>
               </div>
 
-              {/* Tombol aksi */}
               <div className="flex gap-3 pt-6">
                 {mode === "edit" && (
                   <button

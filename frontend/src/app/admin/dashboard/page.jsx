@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { getPospamsApi, getEmergencyApi } from "@/lib/api";
-import { formatRegion } from "@/components/admin/RegionPicker";
 import {
   MapPin,
   Phone,
@@ -14,21 +12,29 @@ import {
   Check,
   Mosque,
   Toilet,
-  ExternalLink, 
+  ExternalLink,
 } from "lucide-react";
+import { getPospamsApi, getEmergencyApi } from "@/lib/api";
+import { formatRegion } from "@/components/admin/RegionPicker";
+import PhotoLightbox from "@/components/admin/PhotoLightbox";
 import { useAuth } from "@/hooks/useAuth";
 import { getRegionScope } from "@/lib/regionScope";
-import PhotoLightbox from "@/components/admin/PhotoLightbox";
 
 const CATEGORIES = ["Bencana", "Medis", "BBM", "Bengkel", "Keamanan"];
 const DEFAULT_FACILITIES = ["Toilet", "Mushola", "Medis", "Parkir Area", "Rest Area"];
 const FACILITY_ICON = {
-  Toilet: Toilet,
+  Toilet,
   Mushola: Mosque,
   Medis: Cross,
   "Parkir Area": ParkingCircle,
   "Rest Area": ParkingCircle,
 };
+
+const cardClass = "bg-white rounded-xl shadow-sm p-5 border border-slate-100";
+const menuButtonClass =
+  "bg-[#1b9fb8] hover:bg-[#158aa0] transition text-white py-10 md:py-12 rounded-xl font-bold text-xl md:text-2xl shadow-sm text-center flex items-center justify-center";
+// "all" = tampilkan semua data
+const limitOf = (v) => (v === "all" ? Infinity : Number(v));
 
 // ---------- Normalisasi data backend ----------
 const normalizePospam = (p) => ({
@@ -57,7 +63,7 @@ const normalizeEmergency = (e) => ({
   lng: e.lng ?? e.longitude ?? null,
 });
 
-// ---------- Helper ----------
+// ---------- Format koordinat ----------
 const toDMS = (deg, pos, neg) => {
   const abs = Math.abs(deg);
   const d = Math.floor(abs);
@@ -65,6 +71,7 @@ const toDMS = (deg, pos, neg) => {
   const s = ((abs - d) * 60 - m) * 60;
   return `${d}°${String(m).padStart(2, "0")}'${s.toFixed(1)}"${deg >= 0 ? pos : neg}`;
 };
+
 const formatCoord = (lat, lng) =>
   lat == null || lng == null ? "-" : `${toDMS(lat, "N", "S")} ${toDMS(lng, "E", "W")}`;
 
@@ -77,6 +84,7 @@ function MapEmbed({ lat, lng }) {
       </div>
     );
   }
+
   return (
     <div className="space-y-1.5">
       <div className="h-[280px] rounded-lg overflow-hidden border border-slate-200">
@@ -140,11 +148,11 @@ function PageSize({ value, onChange }) {
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="bg-white border border-slate-400 rounded-full px-3 py-1 pr-6 text-xs text-slate-700 appearance-none focus:outline-none cursor-pointer"
+          className="bg-white border border-slate-400 rounded-full px-5 py-1 pr-6 text-xs text-slate-700 appearance-none focus:outline-none cursor-pointer"
         >
+          <option value="5">5</option>
           <option value="10">10</option>
-          <option value="25">25</option>
-          <option value="50">50</option>
+          <option value="all">Semua</option>
         </select>
         <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500" />
       </div>
@@ -155,14 +163,18 @@ function PageSize({ value, onChange }) {
 function EmptyDetail() {
   return (
     <div className="h-full min-h-[200px] flex flex-col items-center justify-center text-center gap-1">
-      <p className="text-xs md:text-sm font-semibold text-slate-600">Tidak ada Detail Informasi Pengadu</p>
+      <p className="text-xs md:text-sm font-semibold text-slate-600">
+        Tidak ada Detail Informasi Pengadu
+      </p>
       <p className="text-xs text-slate-400">Pilih salah satu data pengaduan dari daftar</p>
     </div>
   );
 }
+
 // ---------- Halaman ----------
 export default function AdminDashboardPage() {
   const { profile } = useAuth();
+
   const [pospamList, setPospamList] = useState([]);
   const [emergencyList, setEmergencyList] = useState([]);
   const [loadingPospam, setLoadingPospam] = useState(true);
@@ -171,8 +183,8 @@ export default function AdminDashboardPage() {
   const [selectedPospam, setSelectedPospam] = useState(null);
   const [selectedEmergency, setSelectedEmergency] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
-  const [pageSizePospam, setPageSizePospam] = useState("10");
-  const [pageSizeEmergency, setPageSizeEmergency] = useState("10");
+  const [pageSizePospam, setPageSizePospam] = useState("5");
+  const [pageSizeEmergency, setPageSizeEmergency] = useState("5");
   const [lightboxIndex, setLightboxIndex] = useState(null);
 
   const todayFormatted = new Date().toLocaleDateString("id-ID", {
@@ -182,107 +194,92 @@ export default function AdminDashboardPage() {
     year: "numeric",
   });
 
+  async function fetchData() {
+    const scope = getRegionScope(profile);
+    if (!scope.ready) return;
+
+    if (scope.blocked) {
+      setPospamList([]);
+      setEmergencyList([]);
+      setLoadingPospam(false);
+      setLoadingEmergency(false);
+      return;
+    }
+
+    try {
+      const data = await getPospamsApi(scope.params);
+      const arr = Array.isArray(data) ? data : data.data || [];
+      setPospamList(arr.map(normalizePospam));
+    } catch (error) {
+      console.error("Error fetching pospam:", error);
+      setPospamList([]);
+    } finally {
+      setLoadingPospam(false);
+    }
+
+    try {
+      const data = await getEmergencyApi(scope.params);
+      const arr = Array.isArray(data) ? data : data.data || [];
+      setEmergencyList(arr.map(normalizeEmergency));
+    } catch (error) {
+      console.error("Error fetching emergency:", error);
+      setEmergencyList([]);
+    } finally {
+      setLoadingEmergency(false);
+    }
+  }
+
   useEffect(() => {
-  fetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [profile?.role, profile?.region]);
-
-async function fetchData() {
-  const scope = getRegionScope(profile);
-  if (!scope.ready) return;
-
-  if (scope.blocked) {
-    setPospamList([]);
-    setEmergencyList([]);
-    setLoadingPospam(false);
-    setLoadingEmergency(false);
-    return;
-  }
-
-  try {
-    const data = await getPospamsApi(scope.params);
-    const arr = Array.isArray(data) ? data : data.data || [];
-    setPospamList(arr.map(normalizePospam));
-  } catch (error) {
-    console.error("Error fetching pospam:", error);
-    setPospamList([]);
-  } finally {
-    setLoadingPospam(false);
-  }
-
-  try {
-    const data = await getEmergencyApi(scope.params);
-    const arr = Array.isArray(data) ? data : data.data || [];
-    setEmergencyList(arr.map(normalizeEmergency));
-  } catch (error) {
-    console.error("Error fetching emergency:", error);
-    setEmergencyList([]);
-  } finally {
-    setLoadingEmergency(false);
-  }
-}
+    fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.role, profile?.region]);
 
   const filteredEmergency = emergencyList.filter((item) =>
     activeCategory ? item.category?.toLowerCase() === activeCategory.toLowerCase() : true
   );
 
-  const otherFacilities = selectedPospam
-    ? selectedPospam.facilities.filter((f) => !DEFAULT_FACILITIES.includes(f))
-    : [];
-  const defaultFacilities = selectedPospam
-    ? selectedPospam.facilities.filter((f) => DEFAULT_FACILITIES.includes(f))
-    : [];
+  const facilities = selectedPospam?.facilities || [];
+  const defaultFacilities = facilities.filter((f) => DEFAULT_FACILITIES.includes(f));
+  const otherFacilities = facilities.filter((f) => !DEFAULT_FACILITIES.includes(f));
   const photos = selectedPospam?.photos || [];
-
-  const cardClass = "bg-white rounded-xl shadow-sm p-5 border border-slate-100";
 
   return (
     <div className="min-h-[calc(100vh-72px)] bg-[#eaedf6] font-sans pb-12">
       <main className="w-[calc(100%-3rem)] max-w-7xl mx-auto pt-5 space-y-4">
-        {/* Judul & Tanggal */}
-    <div className="flex items-start justify-between">
-      <div className="flex items-center gap-3">
-      <Image 
-        src="/icons_location.png" 
-        alt="location icon" 
-        width={68} 
-        height={68} 
-        className="shrink-0"
-      />
-    
-    <div>
-      <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">
-        Dashboard SIPOSPAM
-      </h1>
-      <p className="text-xs md:text-sm text-slate-600 font-medium mt-0.5">
-        Daftar Pos Pengamanan pada wilayah Anda.
-      </p>
-    </div>
-  </div>
-  <div className="text-xs md:text-sm font-semibold text-slate-800 pt-1">
-    {todayFormatted}
-  </div>
-</div>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/icons_location.png"
+              alt="location icon"
+              width={68}
+              height={68}
+              className="shrink-0"
+            />
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-tight">
+                Dashboard SIPOSPAM
+              </h1>
+              <p className="text-xs md:text-sm text-slate-600 font-medium mt-0.5">
+                Daftar Pos Pengamanan pada wilayah Anda.
+              </p>
+            </div>
+          </div>
+          <div className="text-xs md:text-sm font-semibold text-slate-800 pt-1">
+            {todayFormatted}
+          </div>
+        </div>
 
-        {/* Tombol Menu Utama */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <Link
-            href="/admin/kelola-pospam"
-            className="bg-[#1b9fb8] hover:bg-[#158aa0] transition text-white py-10 md:py-12 rounded-xl font-bold text-xl md:text-2xl shadow-sm text-center flex items-center justify-center"
-          >
+          <Link href="/admin/kelola-pospam" className={menuButtonClass}>
             Kelola Pospam
           </Link>
-          <Link
-            href="/admin/kelola-nomor-darurat"
-            className="bg-[#1b9fb8] hover:bg-[#158aa0] transition text-white py-10 md:py-12 rounded-xl font-bold text-xl md:text-2xl shadow-sm text-center flex items-center justify-center"
-          >
+          <Link href="/admin/kelola-nomor-darurat" className={menuButtonClass}>
             Kelola Nomor Darurat
           </Link>
         </div>
 
-        {/* ===== Section POSPAM ===== */}
+        {/* ===== Pospam ===== */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          {/* Daftar Pospam */}
           <div className={`${cardClass} flex flex-col justify-between min-h-[420px]`}>
             <div>
               <h2 className="text-sm md:text-base font-bold text-slate-800 mb-4">
@@ -297,16 +294,14 @@ async function fetchData() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {pospamList.slice(0, Number(pageSizePospam)).map((item) => (
+                  {pospamList.slice(0, limitOf(pageSizePospam)).map((item) => (
                     <ListItem
                       key={item.id}
                       title={item.name}
                       address={item.address}
                       contact={`${item.coordinator || "-"} ${item.phone || "-"}`}
                       selected={selectedPospam?.id === item.id}
-                      onClick={() => {
-                        setSelectedPospam(item);
-                      }}
+                      onClick={() => setSelectedPospam(item)}
                     />
                   ))}
                 </div>
@@ -317,7 +312,6 @@ async function fetchData() {
             </div>
           </div>
 
-          {/* Detail Pospam */}
           <div className={cardClass}>
             {selectedPospam ? (
               <div className="space-y-3">
@@ -326,12 +320,16 @@ async function fetchData() {
                 </h2>
                 <MapEmbed lat={selectedPospam.lat} lng={selectedPospam.lng} />
 
-                <h3 className="text-sm md:text-base font-bold text-slate-900 pt-1">Detail Informasi Pengadu</h3>
+                <h3 className="text-sm md:text-base font-bold text-slate-900 pt-1">
+                  Detail Informasi Pengadu
+                </h3>
                 <div className="space-y-1.5">
                   <Row label="Nama Kordinator">{selectedPospam.coordinator || "-"}</Row>
                   <Row label="Alamat">{selectedPospam.address || "-"}</Row>
                   <Row label="No Kontak">{selectedPospam.phone || "-"}</Row>
-                  <Row label="Koordinat">{formatCoord(selectedPospam.lat, selectedPospam.lng)}</Row>
+                  <Row label="Koordinat">
+                    {formatCoord(selectedPospam.lat, selectedPospam.lng)}
+                  </Row>
                   <Row label="Fasilitas">&nbsp;</Row>
                 </div>
 
@@ -351,7 +349,9 @@ async function fetchData() {
 
                 {otherFacilities.length > 0 && (
                   <div>
-                    <p className="text-xs md:text-sm font-semibold text-slate-800 mb-1.5">Fasilitas Lainnya:</p>
+                    <p className="text-xs md:text-sm font-semibold text-slate-800 mb-1.5">
+                      Fasilitas Lainnya:
+                    </p>
                     <ol className="grid grid-flow-col grid-rows-3 gap-x-6 gap-y-1 text-xs md:text-sm text-slate-600 font-medium list-none">
                       {otherFacilities.map((f, i) => (
                         <li key={f}>
@@ -405,9 +405,8 @@ async function fetchData() {
           </div>
         </div>
 
-        {/* ===== Section NOMOR DARURAT ===== */}
+        {/* ===== Nomor Darurat ===== */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-          {/* Daftar Nomor Darurat */}
           <div className={`${cardClass} flex flex-col justify-between min-h-[420px]`}>
             <div>
               <h2 className="text-sm md:text-base font-bold text-slate-800 mb-4">
@@ -440,7 +439,7 @@ async function fetchData() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {filteredEmergency.slice(0, Number(pageSizeEmergency)).map((item) => (
+                  {filteredEmergency.slice(0, limitOf(pageSizeEmergency)).map((item) => (
                     <ListItem
                       key={item.id}
                       title={item.name}
@@ -458,23 +457,24 @@ async function fetchData() {
             </div>
           </div>
 
-          {/* Detail Nomor Darurat */}
           <div className={cardClass}>
             {selectedEmergency ? (
               <div className="space-y-3">
-                 <h2 className="text-sm md:text-base font-bold text-slate-800">
+                <h2 className="text-sm md:text-base font-bold text-slate-800">
                   Detail Lokasi {selectedEmergency.name}
                 </h2>
                 <MapEmbed lat={selectedEmergency.lat} lng={selectedEmergency.lng} />
 
-                <h3 className="text-sm md:text-base font-bold text-slate-900 pt-1">Detail Instansi</h3>
+                <h3 className="text-sm md:text-base font-bold text-slate-900 pt-1">
+                  Detail Instansi
+                </h3>
                 <div className="space-y-2">
                   <Row label="Nama Instansi">{selectedEmergency.name || "-"}</Row>
                   <Row label="Alamat">{selectedEmergency.address || "-"}</Row>
                   <Row label="Nomor">{selectedEmergency.phone || "-"}</Row>
-                   <div className="grid grid-cols-[110px_1fr] md:grid-cols-[130px_1fr] gap-1 text-xs md:text-sm items-center">
-                      <span className="font-semibold text-slate-800">Kategori</span>
-                      <span className="text-slate-600 font-medium">
+                  <div className="grid grid-cols-[110px_1fr] md:grid-cols-[130px_1fr] gap-1 text-xs md:text-sm items-center">
+                    <span className="font-semibold text-slate-800">Kategori</span>
+                    <span className="text-slate-600 font-medium">
                       :{" "}
                       {selectedEmergency.category ? (
                         <span className="inline-block bg-slate-200 text-slate-700 rounded-full px-5 py-1 ml-1">

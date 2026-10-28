@@ -1,7 +1,5 @@
-// src/app/reset-password/page.jsx
-// Halaman tujuan link "ganti password" dari email. Bersifat publik (tidak masuk matcher proxy.js),
-// tetapi formnya hanya tampil kalau halaman dibuka dari link email yang valid.
 "use client";
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -31,7 +29,7 @@ function Shell({ children }) {
 
 export default function ResetPasswordPage() {
   const router = useRouter();
-  const [status, setStatus] = useState("checking"); // checking | ready | invalid | done
+  const [status, setStatus] = useState("checking");
   const [baru, setBaru] = useState("");
   const [konfirmasi, setKonfirmasi] = useState("");
   const [error, setError] = useState("");
@@ -39,8 +37,8 @@ export default function ResetPasswordPage() {
   const fromLink = useRef(null);
 
   useEffect(() => {
-    // Catat SEKALI apakah halaman ini dibuka dari link email. Supabase menghapus kode dari URL
-    // setelah dipakai, jadi harus dibaca sebelum klien dibuat.
+    // Dicatat sekali: Supabase menghapus kode dari URL setelah dipakai,
+    // jadi harus dibaca sebelum klien dibuat.
     if (fromLink.current === null) {
       const query = new URLSearchParams(window.location.search);
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -49,7 +47,7 @@ export default function ResetPasswordPage() {
         !linkError && (query.has("code") || query.has("token_hash") || hash.has("access_token"));
     }
 
-    // Tanpa link yang valid, jangan tampilkan form (mencegah pengguna yang sedang login
+    // Tanpa link dari email, form tidak ditampilkan (mencegah pengguna yang sedang login
     // mengganti password tanpa konfirmasi lewat email).
     if (!fromLink.current) {
       setStatus("invalid");
@@ -57,13 +55,14 @@ export default function ResetPasswordPage() {
     }
 
     let cancelled = false;
-    // getSession() menunggu pertukaran kode dari link email selesai
+    
     createClient()
       .auth.getSession()
       .then(({ data: { session } }) => {
         if (!cancelled) setStatus(session ? "ready" : "invalid");
       })
       .catch(() => !cancelled && setStatus("invalid"));
+
     return () => {
       cancelled = true;
     };
@@ -125,7 +124,8 @@ export default function ResetPasswordPage() {
           <h1 className="text-base font-bold text-gray-900">Link tidak valid</h1>
           <p className="text-sm text-gray-500">
             Link ganti password sudah kedaluwarsa, sudah dipakai, atau halaman ini tidak dibuka
-            dari link di email. Minta link baru lewat menu profil, bagian Ganti Password.
+            dari link di email. Minta link baru lewat Lupa Password di halaman login, atau
+            lewat menu profil bagian Ganti Password.
           </p>
           <Link
             href="/login"
