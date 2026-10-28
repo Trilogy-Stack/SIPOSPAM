@@ -13,6 +13,7 @@ import {
   deleteNomorNasional,
 } from "@/lib/api";
 import { uploadNomorIcon } from "@/lib/uploadIcon";
+import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
 
 // Data BE (tabel nomor_darurat) -> bentuk yang dipakai komponen UI
 const fromApi = (r) => ({
@@ -34,7 +35,7 @@ export default function NomorNasionalPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
-  const [notice, setNotice] = useState(null); // { type: "success" | "error", text }
+  const { toasts, toast, dismiss } = useToast(); // ← diubah (menggantikan state notice)
 
   const load = useCallback(async () => {
     setLoadError("");
@@ -51,13 +52,6 @@ export default function NomorNasionalPage() {
   useEffect(() => {
     load();
   }, [load]);
-
-  // Notifikasi hilang sendiri setelah beberapa detik
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => setNotice(null), 4500);
-    return () => clearTimeout(t);
-  }, [notice]);
 
   function openAdd() {
     setEditData(null);
@@ -99,10 +93,9 @@ export default function NomorNasionalPage() {
     }
 
     await load();
-    setNotice({
-      type: "success",
-      text: item.id ? `Nomor "${item.nama}" diperbarui.` : `Nomor "${item.nama}" ditambahkan.`,
-    });
+    toast.success( // ← diubah
+      item.id ? `Nomor "${item.nama}" diperbarui.` : `Nomor "${item.nama}" ditambahkan.`
+    );
   }
 
   // Hapus permanen (tabel nomor_darurat tidak punya kolom is_active)
@@ -111,7 +104,7 @@ export default function NomorNasionalPage() {
     setDeleteError("");
     try {
       await deleteNomorNasional(deleteTarget.id);
-      setNotice({ type: "success", text: `Nomor "${deleteTarget.nama}" dihapus.` });
+      toast.success(`Nomor "${deleteTarget.nama}" dihapus.`); // ← diubah
       closeDelete();
       await load();
     } catch (err) {
@@ -135,18 +128,6 @@ export default function NomorNasionalPage() {
         </div>
 
         <div className="mb-6 mt-4 h-[3px] rounded bg-gray-300" />
-
-        {notice && (
-          <div
-            className={`mb-4 rounded-md border px-4 py-2.5 text-sm ${
-              notice.type === "success"
-                ? "border-green-200 bg-green-50 text-green-700"
-                : "border-red-200 bg-red-50 text-red-600"
-            }`}
-          >
-            {notice.text}
-          </div>
-        )}
 
         {loading ? (
           <p className="py-12 text-center text-sm text-gray-400">Memuat nomor nasional...</p>
@@ -195,6 +176,8 @@ export default function NomorNasionalPage() {
         {deleteTarget?.nomor && <p className="text-xs text-gray-500">{deleteTarget.nomor}</p>}
         <p className="mt-3 text-xs text-gray-400">Tindakan ini tidak dapat dibatalkan.</p>
       </ConfirmDialog>
+
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />{/* ← diubah (ditambahkan) */}
     </div>
   );
 }

@@ -221,3 +221,7 @@ export const adminUpdateBody = z.object({
   role: z.enum(["super_admin", "admin_wilayah"]).optional(),
   is_active: z.boolean().optional(),
 });
+
+export const adminDeleteBody = z.object({
+  password: z.string().min(1, "Password wajib diisi").max(72),
+});

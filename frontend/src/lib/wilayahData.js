@@ -40,6 +40,7 @@ export function buildWilayahList(rows = [], admins = []) {
       lokasi: r.location ?? "",
       area: r.area ?? "",
       fasilitas: Array.isArray(r.facility) ? r.facility : [],
+      koordinator: r.koor_name || "-",
       telepon: r.koor_phone || "-",
       lat,
       lng,

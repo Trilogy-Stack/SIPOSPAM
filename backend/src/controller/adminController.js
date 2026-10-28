@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from "../config/supabase.js";
+import { supabase, supabaseAdmin, createStatelessClient, BUCKET_FOTO } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 
 // Helper penanganan error Supabase Auth
@@ -93,7 +93,20 @@ export const updateAdmin = wrap(async (req, res) => {
   const { id } = req.valid.params;
   const { name, email, region, role, is_active } = req.valid.body;
 
-  await ambilAdmin(id); // Memastikan ID ada
+  const targetAdmin = await ambilAdmin(id); // Memastikan ID ada
+
+  if (role != undefined && targetAdmin.role === "super_admin" && role !== "super_admin") {
+    const { count, error: countError } = await supabaseAdmin
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("role", "super_admin");
+    
+    if (countError) throw countError;
+
+    if (count <= 1) {
+      throw new HttpError(400, "Aksi ditolak. Tidak dapat mengubah role Super Admin!");
+    }
+  }
 
   // Update email di Supabase Auth jika berubah
   if (email !== undefined) {
@@ -123,11 +136,86 @@ export const updateAdmin = wrap(async (req, res) => {
 });
 
 // 4. Hapus akun admin
+// export const deleteAdmin = wrap(async (req, res) => {
+//   const { id } = req.valid.params;
+  
+//   const targetAdmin = await ambilAdmin(id);
+
+//   if (targetAdmin.role === "super_admin") {
+//     const { count, error: countError } = await supabaseAdmin
+//       .from("profiles")
+//       .select("*", { count: "exact", head: true })
+//       .eq("role", "super_admin");
+    
+//     if (countError) throw countError;
+
+//     if (count <= 1) {
+//       throw new HttpError(400, "Aksi ditolak. Setidaknya ada satu Super Admin yang terdaftar!");
+//     }
+//   }
+
+//   const { error } = await supabaseAdmin.auth.admin.deleteUser(id); // Profil ikut terhapus otomatis (cascade)
+//   if (error) throw error;
+
+//   res.json({ message: "Akun admin berhasil dihapus" });
+// });
+
+// 4. Hapus permanen akun admin nonaktif beserta data wilayahnya
 export const deleteAdmin = wrap(async (req, res) => {
   const { id } = req.valid.params;
-  await ambilAdmin(id);
+  const { password } = req.valid.body;
 
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(id); // Profil ikut terhapus otomatis (cascade)
+  // Konfirmasi: password superadmin yang sedang login
+  const { error: errPw } = await createStatelessClient().auth.signInWithPassword({
+    email: req.user.email,
+    password,
+  });
+  if (errPw) {
+    if (errPw.status === 429) {
+      throw new HttpError(429, "Terlalu banyak percobaan. Coba lagi beberapa menit lagi");
+    }
+    throw new HttpError(400, "Password salah");
+  }
+
+  const admin = await ambilAdmin(id);
+
+  if (id === req.user.id) throw new HttpError(400, "Tidak bisa menghapus akun sendiri");
+  if (admin.role === "super_admin") throw new HttpError(400, "Akun superadmin tidak bisa dihapus dari sini");
+  if (admin.region === "NASIONAL") throw new HttpError(400, "Wilayah NASIONAL tidak boleh dihapus");
+  if (admin.is_active !== false) throw new HttpError(400, "Nonaktifkan akun terlebih dahulu");
+
+  const bucket = BUCKET_FOTO || "pospam-photos";
+  const marker = `/${bucket}/`;
+
+  if (admin.region) {
+    // Kumpulkan path foto dulu sebelum barisnya dihapus
+    const { data: pos } = await supabaseAdmin.from("pospam").select("photo").eq("region", admin.region);
+    const fotoPaths = (pos ?? [])
+      .flatMap((p) => (Array.isArray(p.photo) ? p.photo : []))
+      .map((u) => {
+        const i = String(u).indexOf(marker);
+        return i >= 0 ? decodeURIComponent(String(u).slice(i + marker.length).split("?")[0]) : null;
+      })
+      .filter(Boolean);
+
+    // Hapus data wilayah ini
+    const { error: e1 } = await supabaseAdmin.from("pospam").delete().eq("region", admin.region);
+    if (e1) throw e1;
+    const { error: e2 } = await supabaseAdmin.from("nomor_darurat").delete().eq("region", admin.region);
+    if (e2) throw e2;
+
+    // Bersihkan foto (tidak menggagalkan penghapusan akun kalau gagal)
+    if (fotoPaths.length) {
+      const { error: eFoto } = await supabaseAdmin.storage.from(bucket).remove(fotoPaths);
+      if (eFoto) console.error("Gagal menghapus foto:", eFoto.message);
+    }
+  }
+
+  // Profil dan akun Auth
+  const { error: e3 } = await supabaseAdmin.from("profiles").delete().eq("id", id);
+  if (e3) throw e3;
+
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
   if (error) throw error;
 
   res.json({ message: "Akun admin berhasil dihapus" });

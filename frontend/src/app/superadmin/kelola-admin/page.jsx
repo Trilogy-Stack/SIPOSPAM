@@ -6,9 +6,15 @@ import AdminTable from "@/components/superadmin/AdminTable";
 import AdminFormModal from "@/components/superadmin/AdminFormModal";
 import EmptyState from "@/components/superadmin/EmptyState";
 import ConfirmDialog from "@/components/shared/ui/ConfirmDialog";
-import { getAdminList, createAdmin, updateAdmin } from "@/lib/api";
+import { getAdminList, createAdmin, updateAdmin, deleteAdmin } from "@/lib/api";
+import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
+import PasswordInput from "@/components/shared/ui/PasswordInput";
 
 const norm = (s) => (s ?? "").trim().toLowerCase();
+
+// Urut abjad menurut nama polres (tidak peka huruf besar/kecil, angka diurut sebagai angka)
+const byName = (a, b) =>
+  (a.name ?? "").localeCompare(b.name ?? "", "id", { sensitivity: "base", numeric: true });
 
 // Pesan error BE (terutama pelanggaran UNIQUE dari database) dibuat lebih jelas
 function friendlyError(err) {
@@ -49,12 +55,17 @@ export default function KelolaAdminPage() {
   const [deactivateError, setDeactivateError] = useState("");
 
   const [busyId, setBusyId] = useState(null); // admin yang sedang diaktifkan kembali
-  const [notice, setNotice] = useState(null); // { type: "success" | "error", text }
+  const { toasts, toast, dismiss } = useToast();
+
+  const [permTarget, setPermTarget] = useState(null);
+  const [permDeleting, setPermDeleting] = useState(false);
+  const [permError, setPermError] = useState("");
+  const [permPassword, setPermPassword] = useState(""); // password superadmin untuk konfirmasi
 
   // Turunan dari data BE
   const admins = profiles.filter((p) => p.role !== "super_admin");
-  const activeAdmins = admins.filter((a) => a.is_active !== false);
-  const inactiveAdmins = admins.filter((a) => a.is_active === false);
+  const activeAdmins = admins.filter((a) => a.is_active !== false).sort(byName);
+  const inactiveAdmins = admins.filter((a) => a.is_active === false).sort(byName);
 
   const loadProfiles = useCallback(async () => {
     setLoadError("");
@@ -71,13 +82,6 @@ export default function KelolaAdminPage() {
   useEffect(() => {
     loadProfiles();
   }, [loadProfiles]);
-
-  // Notifikasi hilang sendiri setelah beberapa detik
-  useEffect(() => {
-    if (!notice) return;
-    const t = setTimeout(() => setNotice(null), 4500);
-    return () => clearTimeout(t);
-  }, [notice]);
 
   function openAdd() {
     setEditing(null);
@@ -145,6 +149,11 @@ export default function KelolaAdminPage() {
       throw new Error(friendlyError(err));
     }
     await loadProfiles();
+    toast.success(
+      editing
+        ? `Akun "${data.name}" berhasil diperbarui.`
+        : `Akun "${data.name}" berhasil ditambahkan.`
+    );
   }
 
   // "Hapus" = soft delete: akun dinonaktifkan, datanya tidak dihapus dari database
@@ -153,10 +162,9 @@ export default function KelolaAdminPage() {
     setDeactivateError("");
     try {
       await updateAdmin(deactivateTarget.id, { is_active: false });
-      setNotice({
-        type: "success",
-        text: `Akun "${deactivateTarget.name}" dinonaktifkan. Bisa diaktifkan kembali dari bagian "Akun nonaktif" di bawah.`,
-      });
+      toast.success(
+        `Akun "${deactivateTarget.name}" dinonaktifkan. Bisa diaktifkan kembali dari bagian "Akun nonaktif" di bawah.`
+      );
       closeDeactivate();
       await loadProfiles();
     } catch (err) {
@@ -171,13 +179,38 @@ export default function KelolaAdminPage() {
     try {
       await updateAdmin(admin.id, { is_active: true });
       await loadProfiles();
-      setNotice({ type: "success", text: `Akun "${admin.name}" diaktifkan kembali.` });
+      toast.success(`Akun "${admin.name}" diaktifkan kembali.`);
     } catch (err) {
-      setNotice({ type: "error", text: friendlyError(err) });
+      toast.error(friendlyError(err));
     } finally {
       setBusyId(null);
     }
   }
+
+  function closePerm() {
+    if (permDeleting) return;
+    setPermTarget(null);
+    setPermError("");
+    setPermPassword("");
+  }
+
+  // Hapus permanen akun nonaktif (password superadmin diperiksa di BE)
+  async function handleConfirmPerm() {
+    setPermDeleting(true);
+    setPermError("");
+    try {
+      await deleteAdmin(permTarget.id, permPassword);
+      toast.success(`Akun "${permTarget.name}" dihapus permanen.`);
+      setPermTarget(null);
+      setPermPassword("");
+      await loadProfiles();
+    } catch (err) {
+      setPermError(friendlyError(err));
+    } finally {
+      setPermDeleting(false);
+    }
+  }
+
 
   return (
     <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
@@ -193,18 +226,6 @@ export default function KelolaAdminPage() {
         </div>
 
         <div className="mb-6 mt-4 h-[3px] rounded bg-gray-300" />
-
-        {notice && (
-          <div
-            className={`mb-4 rounded-md border px-4 py-2.5 text-sm ${
-              notice.type === "success"
-                ? "border-green-200 bg-green-50 text-green-700"
-                : "border-red-200 bg-red-50 text-red-600"
-            }`}
-          >
-            {notice.text}
-          </div>
-        )}
 
         {loading ? (
           <p className="py-12 text-center text-sm text-gray-400">Memuat data admin...</p>
@@ -243,6 +264,7 @@ export default function KelolaAdminPage() {
                   onEdit={openEdit}
                   onDelete={setDeactivateTarget}
                   onReactivate={handleReactivate}
+                  onDeletePermanent={setPermTarget} 
                   busyId={busyId}
                 />
               </>
@@ -280,6 +302,40 @@ export default function KelolaAdminPage() {
           Data pospam tetap tersimpan, dan akun bisa diaktifkan kembali kapan saja.
         </p>
       </ConfirmDialog>
+
+      {/* konfirmasi hapus permanen (ketik nama polres) */}
+            <ConfirmDialog
+        open={!!permTarget}
+        onClose={closePerm}
+        onConfirm={handleConfirmPerm}
+        title="Hapus Permanen Akun Admin"
+        confirmLabel="Hapus permanen"
+        loading={permDeleting}
+        error={permError}
+        confirmDisabled={!permPassword}
+      >
+        <p>Akun</p>
+        <p className="my-1 text-base font-semibold uppercase tracking-wide text-gray-900">
+          {permTarget?.name}
+        </p>
+        <p className="mt-2">
+          beserta seluruh pospam dan nomor darurat wilayahnya akan dihapus permanen dan tidak
+          bisa dikembalikan.
+        </p>
+        <p className="mt-3 text-xs text-gray-500">
+          Masukkan password Anda sebagai superadmin untuk melanjutkan:
+        </p>
+        <div className="mt-2 text-left">
+          <PasswordInput
+            value={permPassword}
+            onChange={(e) => setPermPassword(e.target.value)}
+            autoComplete="new-password"
+            placeholder="Password Superadmin"
+          />
+        </div>
+      </ConfirmDialog>
+
+      <ToastContainer toasts={toasts} onDismiss={dismiss} />
     </div>
   );
 }

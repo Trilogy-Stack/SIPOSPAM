@@ -1,7 +1,7 @@
 // src/components/superadmin/AdminTable.jsx
 import { Mail, Pencil, RotateCcw, Trash2 } from "lucide-react";
 
-export default function AdminTable({ admins, onEdit, onDelete, onReactivate, busyId }) {
+export default function AdminTable({ admins, onEdit, onDelete, onReactivate, onDeletePermanent, busyId }) {
   return (
     <div className="flex flex-col gap-3">
       {admins.map((a) => {
@@ -45,14 +45,24 @@ export default function AdminTable({ admins, onEdit, onDelete, onReactivate, bus
 
             <div className="ml-4 flex shrink-0 gap-2">
               {inactive ? (
-                <button
-                  onClick={() => onReactivate(a)}
-                  disabled={busyId === a.id}
-                  className="flex items-center gap-2 rounded-md border border-[#1BA3BA] px-3.5 py-2 text-sm font-medium text-[#1BA3BA] transition-colors hover:bg-[#1BA3BA] hover:text-white disabled:opacity-50"
-                >
-                  <RotateCcw size={15} />
-                  {busyId === a.id ? "Memproses..." : "Aktifkan kembali"}
-                </button>
+                <>
+                  <button
+                    onClick={() => onReactivate(a)}
+                    disabled={busyId === a.id}
+                    className="flex items-center gap-2 rounded-md border border-[#1BA3BA] px-3.5 py-2 text-sm font-medium text-[#1BA3BA] transition-colors hover:bg-[#1BA3BA] hover:text-white disabled:opacity-50"
+                  >
+                    <RotateCcw size={15} />
+                    {busyId === a.id ? "Memproses..." : "Aktifkan kembali"}
+                  </button>
+                  <button
+                    onClick={() => onDeletePermanent?.(a)}
+                    aria-label={`Hapus permanen ${a.name}`}
+                    title="Hapus permanen"
+                    className="flex h-9 w-9 items-center justify-center rounded-md border border-red-300 text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </>
               ) : (
                 <>
                   <button
