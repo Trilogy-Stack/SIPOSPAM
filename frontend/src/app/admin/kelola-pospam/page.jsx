@@ -250,6 +250,17 @@ const handleSubmit = async (e) => {
     return;
   }
 
+  const namaSudahAda = pospamList.some(
+  (p) =>
+    p.id !== selectedId && // saat edit, diri sendiri tidak dihitung
+    (p.name || "").trim().toLowerCase() === form.name.trim().toLowerCase()
+);
+
+  if (namaSudahAda) {
+    toast.warning(`Nama pospam "${form.name.trim()}" sudah dipakai. Gunakan nama lain.`);
+    return;
+  }
+
   // Validasi lokasi dilakukan SEBELUM upload foto agar tidak ada upload yang sia-sia
   if (form.lat == null || form.lng == null) {
     toast.warning("Tentukan lokasi pospam pada peta (klik peta atau geser pin).");

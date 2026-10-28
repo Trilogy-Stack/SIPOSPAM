@@ -57,6 +57,8 @@ export const createNomorDarurat = wrap(async (req, res) => {
     body.region = req.user.region;
   }
 
+  await pastikanNamaUnik(body.agency_name, body.region);
+
   const { data, error } = await supabaseAdmin
     .from("nomor_darurat")
     .insert({
@@ -92,6 +94,26 @@ export const updateNomorDarurat = wrap(async (req, res) => {
 
   if (!lama) throw new HttpError(404, "Nomor darurat tidak ditemukan");
   pastikanAksesWilayah(req.user, lama.region);
+
+  if (body.agency_name !== undefined) {
+  await pastikanNamaUnik(body.agency_name, lama.region, id);
+}
+
+  // Nama instansi harus unik dalam satu wilayah (tidak peka huruf besar/kecil)
+async function pastikanNamaUnik(agencyName, region, ignoreId = null) {
+  const pola = agencyName.trim().replace(/[%_\\]/g, "\\$&"); // tanpa wildcard = cocok persis
+  let query = supabaseAdmin
+    .from("nomor_darurat")
+    .select("id")
+    .eq("region", region)
+    .ilike("agency_name", pola)
+    .limit(1);
+  if (ignoreId) query = query.neq("id", ignoreId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  if (data.length) throw new HttpError(409, "Nama instansi sudah terdaftar di wilayah ini");
+}
 
   const { data, error } = await supabaseAdmin
     .from("nomor_darurat")
