@@ -140,6 +140,11 @@ export const uploadFotoPospam = wrap(async (req, res) => {
 export const createPospam = wrap(async (req, res) => {
   const body = req.valid.body;
 
+  if (req.user.role !== "super_admin") {
+  body.region = req.user.region;
+}
+await pastikanNamaUnik(body.name, body.region);
+
   // Jika admin_wilayah, paksa region dari akun login
   if (req.user.role !== "super_admin") {
     body.region = req.user.region;
@@ -170,6 +175,26 @@ export const updatePospam = wrap(async (req, res) => {
 
   if (!poslama) throw new HttpError(404, "Pospam tidak ditemukan");
   pastikanAksesWilayah(req.user, poslama.region);
+
+  if (body.name !== undefined) {
+  await pastikanNamaUnik(body.name, poslama.region, id);
+}
+
+  // Nama pospam harus unik dalam satu wilayah (tidak peka huruf besar/kecil)
+async function pastikanNamaUnik(name, region, ignoreId = null) {
+  const pola = name.trim().replace(/[%_\\]/g, "\\$&"); // tanpa wildcard = cocok persis
+  let query = supabaseAdmin
+    .from("pospam")
+    .select("id")
+    .eq("region", region)
+    .ilike("name", pola)
+    .limit(1);
+  if (ignoreId) query = query.neq("id", ignoreId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  if (data.length) throw new HttpError(409, "Nama pospam sudah dipakai di wilayah ini");
+}
 
   const { data, error } = await supabaseAdmin
     .from("pospam")

@@ -174,6 +174,18 @@ export default function KelolaNomorDaruratPage() {
       toast.warning("Nomor minimal 10 angka.");
       return;
     }
+
+  const namaSudahAda = list.some(
+  (p) =>
+    p.id !== selectedId && (p.area || "") === formatRegion(form.region) // saat edit, diri sendiri tidak dihitung
+    (p.agency_name || "").trim().toLowerCase() === form.name.trim().toLowerCase()
+  );
+  
+    if (namaSudahAda) {
+      toast.warning(`Instansi "${form.name.trim()}" sudah terdaftar. Gunakan nama lain.`);
+      return;
+    }
+
     if (form.lat == null || form.lng == null) {
       toast.warning("Tentukan lokasi pada peta (klik peta atau geser pin).");
       return;
