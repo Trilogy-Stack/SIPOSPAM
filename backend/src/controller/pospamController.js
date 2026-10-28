@@ -12,6 +12,22 @@ function pastikanAksesWilayah(reqUser, targetRegion) {
   }
 }
 
+// Nama pospam harus unik dalam satu wilayah (tidak peka huruf besar/kecil)
+async function pastikanNamaUnik(name, region, ignoreId = null) {
+  const pola = name.trim().replace(/[%_\\]/g, "\\$&"); // tanpa wildcard = cocok persis
+  let query = supabaseAdmin
+    .from("pospam")
+    .select("id")
+    .eq("region", region)
+    .ilike("name", pola)
+    .limit(1);
+  if (ignoreId) query = query.neq("id", ignoreId);
+
+  const { data, error } = await query;
+  if (error) throw error;
+  if (data.length) throw new HttpError(409, "Nama pospam sudah dipakai di wilayah ini");
+}
+
 // Helper Normalisasi Nomor Telepon Pospam (0 atau +62 menjadi 62)
 function normalisasiNomorPospam(nomor) {
   if (!nomor) return nomor;
@@ -43,7 +59,7 @@ export const listPospam = wrap(async (req, res) => {
     .order("created_at", { ascending: false });
 
   if (region) query = query.eq("region", region);
-  
+
   if (q) {
     const aman = q.replace(/[,()%*\\]/g, " ");
     query = query.or(`name.ilike.%${aman}%,location.ilike.%${aman}%`);
@@ -145,6 +161,8 @@ export const createPospam = wrap(async (req, res) => {
     body.region = req.user.region;
   }
 
+  await pastikanNamaUnik(body.name, body.region);
+
   const { data, error } = await supabaseAdmin
     .from("pospam")
     .insert({
@@ -170,6 +188,10 @@ export const updatePospam = wrap(async (req, res) => {
 
   if (!poslama) throw new HttpError(404, "Pospam tidak ditemukan");
   pastikanAksesWilayah(req.user, poslama.region);
+
+  if (body.name !== undefined) {
+    await pastikanNamaUnik(body.name, poslama.region, id);
+  }
 
   const { data, error } = await supabaseAdmin
     .from("pospam")
