@@ -58,7 +58,7 @@ const paging = {
 };
 
 const email = z.string().trim().toLowerCase().email("Email tidak valid");
-const NOMOR_KONTAK = /^[0-9+\-\s()]{6,20}$/;
+const NOMOR_KONTAK = /^(0|62|\+62)[0-9\-\s()]{4,20}$/;
 const NOMOR_TELEPON = /^[0-9+\-\s()]{2,25}$/;
 
 /* ------------------------------------------------------------------ */
@@ -133,7 +133,7 @@ export const adminListQuery = z.object({
 export const pospamBody = z.object({
   name: teks(150),
   koor_name: opsional(100),
-  koor_phone: opsional(20, NOMOR_KONTAK, "Nomor kontak tidak valid"),
+  koor_phone: opsional(20, NOMOR_KONTAK, "Format nomor HP harus diawali dengan angka 0 atau 62"),
   region: teks(100),
   location: teks(250),
   area: opsional(100),
