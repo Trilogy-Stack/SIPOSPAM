@@ -45,6 +45,15 @@ const buildOptions = (extra = []) => [
     .map((name) => ({ name, custom: true })),
 ];
 
+// ISO -> dd/mm/yyyy, HH:mm WIB
+const fmtTanggal = (iso) => {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  const tgl = d.toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Jakarta" });
+  const jam = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Jakarta" }).replace(".", ":");
+  return `${tgl}, ${jam} WIB`;
+};
+
 export default function KelolaPospamPage() {
   const [pospamList, setPospamList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -383,6 +392,9 @@ const handleDelete = async () => {
                   {index + 1}
                 </div>
                 <div className="px-4 py-3.5 space-y-1.5">
+                  <p className="pt-1 text-[11px] text-slate-400">
+                    Terakhir diubah {fmtTanggal(item.updated_at)}
+                  </p>
                   <h3 className="text-sm md:text-base font-semibold text-slate-900">
                     {item.name}{" "}
                     <span className="text-xs font-normal text-slate-600">({item.koor_phone})</span>
@@ -413,9 +425,17 @@ const handleDelete = async () => {
               }`}
             >
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm md:text-base font-bold text-slate-800">
-                                {mode === "add" ? "Tambah Pospam" : "Lihat & Edit Pospam"}
-                              </h2>
+                                <div>
+                  <h2 className="text-sm md:text-base font-bold text-slate-800">
+                    {mode === "add" ? "Tambah Pospam" : "Lihat & Edit Pospam"}
+                  </h2>
+                  {mode === "edit" && (
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Terakhir diubah: {fmtTanggal(pospamList.find((p) => p.id === selectedId)?.updated_at)}
+                    </p>
+                  )}
+                </div>
+
                 <button
                   type="button"
                   onClick={() => {
