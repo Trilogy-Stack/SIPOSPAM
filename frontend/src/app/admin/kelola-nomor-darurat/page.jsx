@@ -62,6 +62,15 @@ const inputClass =
   "w-full border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
 const labelClass = "block text-xs md:text-sm text-slate-600 font-medium mb-1.5";
 
+// ISO -> dd/mm/yyyy, HH:mm WIB
+const fmtTanggal = (iso) => {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  const tgl = d.toLocaleDateString("id-ID", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Jakarta" });
+  const jam = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Jakarta" }).replace(".", ":");
+  return `${tgl}, ${jam} WIB`;
+};
+
 export default function KelolaNomorDaruratPage() {
   const { profile } = useAuth();
   const { toasts, toast, dismiss } = useToast();
@@ -303,10 +312,12 @@ export default function KelolaNomorDaruratPage() {
                   <div className="w-10 h-10 rounded-full bg-[#1a9fb8] flex items-center justify-center shrink-0">
                     <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <div className="min-w-0">
-                    <h3 className="text-xs md:text-sm font-bold text-slate-900 leading-tight">
-                      {item.agency_name}
-                    </h3>
+                    <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                      <h3 className="text-xs md:text-sm font-bold text-slate-900 leading-tight">
+                        {item.agency_name}
+                      </h3>
+                    </div>
                     <p className="text-xs text-slate-700 mt-0.5">({item.telephone})</p>
                   </div>
                 </div>
@@ -323,9 +334,16 @@ export default function KelolaNomorDaruratPage() {
               }`}
             >
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-sm md:text-base font-bold text-slate-800">
-                  {mode === "add" ? "Tambah Nomor Darurat" : "Lihat & Edit Nomor Darurat"}
-                </h2>
+                <div>
+                  <h2 className="text-sm md:text-base font-bold text-slate-800">
+                    {mode === "add" ? "Tambah Nomor Darurat" : "Lihat & Edit Nomor Darurat"}
+                  </h2>
+                  {mode === "edit" && (
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      Terakhir diubah: {fmtTanggal(list.find((p) => p.id === selectedId)?.updated_at)}
+                    </p>
+                  )}
+                </div>
                 <button
                   type="button"
                   onClick={() => {

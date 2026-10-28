@@ -391,14 +391,13 @@ const handleDelete = async () => {
                 <div className="bg-[#1a9fb8] text-white font-bold text-sm w-12 flex items-center justify-center shrink-0">
                   {index + 1}
                 </div>
-                <div className="px-4 py-3.5 space-y-1.5">
-                  <p className="pt-1 text-[11px] text-slate-400">
-                    Terakhir diubah {fmtTanggal(item.updated_at)}
-                  </p>
-                  <h3 className="text-sm md:text-base font-semibold text-slate-900">
-                    {item.name}{" "}
-                    <span className="text-xs font-normal text-slate-600">({item.koor_phone})</span>
-                  </h3>
+                  <div className="flex-1 min-w-0 px-4 py-3.5 space-y-1.5">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                    <h3 className="text-sm md:text-base font-semibold text-slate-900">
+                      {item.name}{" "}
+                      <span className="text-xs font-normal text-slate-600">({item.koor_phone})</span>
+                    </h3>
+                  </div>
                   <p className="text-xs md:text-sm text-slate-700">
                     {item.location}{item.area ? `, ${item.area}` : ""}
                   </p>
