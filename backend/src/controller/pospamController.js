@@ -12,6 +12,18 @@ function pastikanAksesWilayah(reqUser, targetRegion) {
   }
 }
 
+// Helper Normalisasi Nomor Telepon Pospam (0 atau +62 menjadi 62)
+function normalisasiNomorPospam(nomor) {
+  if (!nomor) return nomor;
+  let hasil = nomor.trim();
+  if (hasil.startsWith("0")) {
+    hasil = "62" + hasil.slice(1);
+  } else if (hasil.startsWith("+62")) {
+    hasil = "62" + hasil.slice(3);
+  }
+  return hasil;
+}
+
 /* ------------------------------------------------------------------ */
 /* Public & Peta                                                      */
 /* ------------------------------------------------------------------ */

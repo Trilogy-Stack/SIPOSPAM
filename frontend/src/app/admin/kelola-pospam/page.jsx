@@ -290,6 +290,7 @@ const handleSubmit = async (e) => {
     toast.success(wasAdd ? "Pospam berhasil ditambahkan." : "Pospam berhasil diperbarui.");
   } catch (error) {
     console.error("Gagal menyimpan Pospam:", error);
+    
     toast.error(`Gagal menyimpan: ${error.message}`);
   } finally {
     setSaving(false);

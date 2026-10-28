@@ -42,7 +42,7 @@ async function request(path, options = {}) {
   options.body
 );
     const detail = Array.isArray(json.detail)
-      ? json.detail.map((d) => `${d.field}: ${d.pesan}`).join(", ")
+      ? json.detail.map((d) => d.pesan).join(", ")
       : json.error_message || "";
     throw new Error(
       [json.message || `Request gagal (${res.status})`, detail].filter(Boolean).join(" - ")
