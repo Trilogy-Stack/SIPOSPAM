@@ -33,6 +33,8 @@ const FACILITY_ICON = {
 const cardClass = "bg-white rounded-xl shadow-sm p-5 border border-slate-100";
 const menuButtonClass =
   "bg-[#1b9fb8] hover:bg-[#158aa0] transition text-white py-10 md:py-12 rounded-xl font-bold text-xl md:text-2xl shadow-sm text-center flex items-center justify-center";
+// "all" = tampilkan semua data
+const limitOf = (v) => (v === "all" ? Infinity : Number(v));
 
 // ---------- Normalisasi data backend ----------
 const normalizePospam = (p) => ({
@@ -146,11 +148,11 @@ function PageSize({ value, onChange }) {
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="bg-white border border-slate-400 rounded-full px-3 py-1 pr-6 text-xs text-slate-700 appearance-none focus:outline-none cursor-pointer"
+          className="bg-white border border-slate-400 rounded-full px-5 py-1 pr-6 text-xs text-slate-700 appearance-none focus:outline-none cursor-pointer"
         >
+          <option value="5">5</option>
           <option value="10">10</option>
-          <option value="25">25</option>
-          <option value="50">50</option>
+          <option value="all">Semua</option>
         </select>
         <ChevronDown className="w-3 h-3 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500" />
       </div>
@@ -181,8 +183,8 @@ export default function AdminDashboardPage() {
   const [selectedPospam, setSelectedPospam] = useState(null);
   const [selectedEmergency, setSelectedEmergency] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
-  const [pageSizePospam, setPageSizePospam] = useState("10");
-  const [pageSizeEmergency, setPageSizeEmergency] = useState("10");
+  const [pageSizePospam, setPageSizePospam] = useState("5");
+  const [pageSizeEmergency, setPageSizeEmergency] = useState("5");
   const [lightboxIndex, setLightboxIndex] = useState(null);
 
   const todayFormatted = new Date().toLocaleDateString("id-ID", {
@@ -292,7 +294,7 @@ export default function AdminDashboardPage() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {pospamList.slice(0, Number(pageSizePospam)).map((item) => (
+                  {pospamList.slice(0, limitOf(pageSizePospam)).map((item) => (
                     <ListItem
                       key={item.id}
                       title={item.name}
@@ -437,7 +439,7 @@ export default function AdminDashboardPage() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {filteredEmergency.slice(0, Number(pageSizeEmergency)).map((item) => (
+                  {filteredEmergency.slice(0, limitOf(pageSizeEmergency)).map((item) => (
                     <ListItem
                       key={item.id}
                       title={item.name}
