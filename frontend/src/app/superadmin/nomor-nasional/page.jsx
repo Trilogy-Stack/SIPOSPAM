@@ -1,4 +1,3 @@
-// src/app/superadmin/nomor-nasional/page.jsx
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
@@ -15,7 +14,6 @@ import {
 import { uploadNomorIcon } from "@/lib/uploadIcon";
 import { useToast, ToastContainer } from "@/components/shared/ui/Toast";
 
-// Data BE (tabel nomor_darurat) -> bentuk yang dipakai komponen UI
 const fromApi = (r) => ({
   id: r.id,
   nama: r.agency_name,
@@ -35,7 +33,7 @@ export default function NomorNasionalPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
 
-  const { toasts, toast, dismiss } = useToast(); // ← diubah (menggantikan state notice)
+  const { toasts, toast, dismiss } = useToast(); 
 
   const load = useCallback(async () => {
     setLoadError("");
@@ -72,9 +70,7 @@ export default function NomorNasionalPage() {
     setDeleteError("");
   }
 
-  // Dipanggil NomorNasionalFormModal. Kalau melempar error, modal tetap terbuka dan menampilkannya.
   async function handleSave(item) {
-    // Ikon baru (kalau ada) diunggah dulu; kalau tidak ada file baru, ikon lama tidak disentuh
     const iconUrl = item.logoFile ? await uploadNomorIcon(item.logoFile) : null;
 
     if (item.id) {
@@ -93,18 +89,17 @@ export default function NomorNasionalPage() {
     }
 
     await load();
-    toast.success( // ← diubah
+    toast.success( 
       item.id ? `Nomor "${item.nama}" diperbarui.` : `Nomor "${item.nama}" ditambahkan.`
     );
   }
 
-  // Hapus permanen (tabel nomor_darurat tidak punya kolom is_active)
   async function handleConfirmDelete() {
     setDeleting(true);
     setDeleteError("");
     try {
       await deleteNomorNasional(deleteTarget.id);
-      toast.success(`Nomor "${deleteTarget.nama}" dihapus.`); // ← diubah
+      toast.success(`Nomor "${deleteTarget.nama}" dihapus.`);
       closeDelete();
       await load();
     } catch (err) {

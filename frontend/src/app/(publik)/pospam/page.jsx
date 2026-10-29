@@ -254,21 +254,13 @@ export default function PospamPage() {
     <div className="w-full pb-24 text-slate-800">
       {/* GRID RESPONGIF: 1 Kolom di HP, 12 Kolom Split-Screen di Tablet & Laptop */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-        
-        {/* ================================================================= */}
-        {/* KOLOM KIRI (PETA): Tampil Sticky di Layar Tablet/Laptop           */}
-        {/* ================================================================= */}
         <div className="md:col-span-6 lg:col-span-7 md:sticky md:top-6 order-1 md:order-1">
           <div className="w-full aspect-square max-h-[480px] bg-blue-100 rounded-2xl overflow-hidden relative isolate flex items-center justify-center border border-blue-200 shadow-sm">
             <PublikMap pospams={pospams.length ? pospams : allPospams} userCoords={userCoords} />
           </div>
         </div>
 
-        {/* ================================================================= */}
-        {/* KOLOM KANAN: Filter, Tombol GPS & Daftar Pospam                    */}
-        {/* ================================================================= */}
-        <div className="md:col-span-6 lg:col-span-5 space-y-4 order-2 md:order-2">
-          
+        <div className="md:col-span-6 lg:col-span-5 space-y-4 order-2 md:order-2">          
           {/* Filter Region Search */}
           <div>
             <label className="text-xs font-semibold text-slate-600 mb-1 block">

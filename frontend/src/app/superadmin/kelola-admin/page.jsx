@@ -1,4 +1,3 @@
-// src/app/superadmin/kelola-admin/page.jsx
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { Plus } from "lucide-react";
@@ -12,11 +11,9 @@ import PasswordInput from "@/components/shared/ui/PasswordInput";
 
 const norm = (s) => (s ?? "").trim().toLowerCase();
 
-// Urut abjad menurut nama polres (tidak peka huruf besar/kecil, angka diurut sebagai angka)
 const byName = (a, b) =>
   (a.name ?? "").localeCompare(b.name ?? "", "id", { sensitivity: "base", numeric: true });
 
-// Pesan error BE (terutama pelanggaran UNIQUE dari database) dibuat lebih jelas
 function friendlyError(err) {
   const msg = err?.message || "";
   const dup = /duplicate|unique/i.test(msg);
@@ -29,7 +26,6 @@ function friendlyError(err) {
   return msg || "Terjadi kesalahan";
 }
 
-// Pemisah bergaris dengan judul kecil di tengah
 function SectionDivider({ children }) {
   return (
     <div className="flex items-center gap-4" role="separator">
@@ -43,26 +39,25 @@ function SectionDivider({ children }) {
 }
 
 export default function KelolaAdminPage() {
-  const [profiles, setProfiles] = useState([]); // semua profil dari BE (aktif + nonaktif)
+  const [profiles, setProfiles] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // admin yang sedang diedit, null = tambah baru
+  const [editing, setEditing] = useState(null); 
 
   const [deactivateTarget, setDeactivateTarget] = useState(null);
   const [deactivating, setDeactivating] = useState(false);
   const [deactivateError, setDeactivateError] = useState("");
 
-  const [busyId, setBusyId] = useState(null); // admin yang sedang diaktifkan kembali
+  const [busyId, setBusyId] = useState(null); 
   const { toasts, toast, dismiss } = useToast();
 
   const [permTarget, setPermTarget] = useState(null);
   const [permDeleting, setPermDeleting] = useState(false);
   const [permError, setPermError] = useState("");
-  const [permPassword, setPermPassword] = useState(""); // password superadmin untuk konfirmasi
+  const [permPassword, setPermPassword] = useState(""); 
 
-  // Turunan dari data BE
   const admins = profiles.filter((p) => p.role !== "super_admin");
   const activeAdmins = admins.filter((a) => a.is_active !== false).sort(byName);
   const inactiveAdmins = admins.filter((a) => a.is_active === false).sort(byName);
@@ -103,7 +98,6 @@ export default function KelolaAdminPage() {
     setDeactivateError("");
   }
 
-  // Cek bentrok email/wilayah di semua akun (termasuk nonaktif) sebelum ke BE
   function findConflict(data, ignoreId) {
     const emailHit = profiles.find(
       (p) => p.id !== ignoreId && norm(p.email) === norm(data.email)
@@ -124,14 +118,12 @@ export default function KelolaAdminPage() {
     return null;
   }
 
-  // Dipanggil AdminFormModal. Kalau melempar error, modal tetap terbuka dan menampilkan pesannya.
   async function handleSave(data) {
     const conflict = findConflict(data, editing?.id);
     if (conflict) throw new Error(conflict);
 
     try {
       if (editing) {
-        // Kirim hanya field yang berubah (hindari update email Auth yang tidak perlu)
         const changes = {};
         if (data.name !== editing.name) changes.name = data.name;
         if (data.email !== editing.email) changes.email = data.email;
@@ -156,7 +148,6 @@ export default function KelolaAdminPage() {
     );
   }
 
-  // "Hapus" = soft delete: akun dinonaktifkan, datanya tidak dihapus dari database
   async function handleConfirmDeactivate() {
     setDeactivating(true);
     setDeactivateError("");
@@ -194,7 +185,6 @@ export default function KelolaAdminPage() {
     setPermPassword("");
   }
 
-  // Hapus permanen akun nonaktif (password superadmin diperiksa di BE)
   async function handleConfirmPerm() {
     setPermDeleting(true);
     setPermError("");

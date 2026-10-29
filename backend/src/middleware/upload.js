@@ -1,8 +1,5 @@
-// UDA TAK SESUIAKAN
-
 import multer from "multer";
-
-export const MAKS_UKURAN = 3 * 1024 * 1024; // 3 MB
+export const MAKS_UKURAN = 3 * 1024 * 1024;
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -17,11 +14,9 @@ const upload = multer({
   },
 });
 
-// Unggah satu file (field 'photo' disamakan dengan DB, 'foto' sebagai opsional)
 export const uploadFoto = upload.single("photo");
 export const uploadFotoAlt = upload.single("foto");
 
-// Deteksi tipe gambar via magic bytes (pencegahan pemalsuan MIME)
 export function deteksiTipeGambar(buf) {
   if (!buf || buf.length < 12) return null;
   if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {

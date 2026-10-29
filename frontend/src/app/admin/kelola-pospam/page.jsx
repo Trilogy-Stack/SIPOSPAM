@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUnsavedChanges, UNSAVED_MESSAGE } from "@/hooks/useUnsavedChanges";
-import Image from "next/image"; // Tambahkan import Image
+import Image from "next/image";
 import { Plus, Camera, Trash2, X } from "lucide-react";
 import RegionPicker, {
   EMPTY_REGION,
@@ -45,7 +45,6 @@ const buildOptions = (extra = []) => [
     .map((name) => ({ name, custom: true })),
 ];
 
-// ISO -> dd/mm/yyyy, HH:mm WIB
 const fmtTanggal = (iso) => {
   if (!iso) return "-";
   const d = new Date(iso);
@@ -57,12 +56,12 @@ const fmtTanggal = (iso) => {
 export default function KelolaPospamPage() {
   const [pospamList, setPospamList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState(null); // null | "add" | "edit"
+  const [mode, setMode] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [currentArea, setCurrentArea] = useState("");
 
   const [form, setForm] = useState(emptyForm);
-  const [photos, setPhotos] = useState([]); // { url, file } | null
+  const [photos, setPhotos] = useState([]);
   const [facilityOptions, setFacilityOptions] = useState(defaultOptions);
   const [facilities, setFacilities] = useState([]);
   const [addingFacility, setAddingFacility] = useState(false);
@@ -74,7 +73,6 @@ export default function KelolaPospamPage() {
   const [saving, setSaving] = useState(false);
   const [facilityToDelete, setFacilityToDelete] = useState(null);
 
-// Berapa pospam LAIN yang memakai fasilitas ini
 const facilityUsedByOthers = (name) =>
   pospamList.filter(
     (p) => p.id !== selectedId && (p.facility || []).includes(name)
@@ -82,22 +80,20 @@ const facilityUsedByOthers = (name) =>
 
   const { toasts, toast, dismiss } = useToast();
 
-  const [pickedRegion, setPickedRegion] = useState(null); // wilayah yang dipilih admin sendiri
+  const [pickedRegion, setPickedRegion] = useState(null);
   const focus = regionToQueries(pickedRegion);
 
   const { profile } = useAuth();
 
   useEffect(() => {
   fetchPospam();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [profile?.role, profile?.region]);
 
-// Tambahkan state error di dalam komponen KelolaPospamPage
 const [errorMessage, setErrorMessage] = useState("");
 
 const fetchPospam = async () => {
   const scope = getRegionScope(profile);
-  if (!scope.ready) return; // tunggu profil selesai dimuat
+  if (!scope.ready) return;
 
   if (scope.blocked) {
     setPospamList([]);
@@ -122,24 +118,26 @@ const fetchPospam = async () => {
 };
 
   const allFacilityNames = pospamList.flatMap((p) => p.facility || []);
-  // ---------- Peringatan perubahan belum disimpan ----------
+  
   const snapshot = () =>
     JSON.stringify({
       form,
       photos: photos.map((p) => (p ? (p.file ? `baru:${p.file.name}:${p.file.size}` : p.url) : null)),
       facilities,
     });
+
   const [baseline, setBaseline] = useState("");
+  
   useEffect(() => {
-    // Setelah form dibuka (tambah / edit), catat kondisi awalnya
     setBaseline(mode ? snapshot() : "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, selectedId]);
+  
   const dirty = !!mode && !!baseline && snapshot() !== baseline;
+  
   useUnsavedChanges(dirty);
+  
   const confirmLeaveForm = () => !dirty || window.confirm(UNSAVED_MESSAGE);
 
-  // ---------- Buka form ----------
   const openAdd = () => {
     if (!confirmLeaveForm()) return;
     cancelAddFacility();
@@ -168,7 +166,7 @@ const openEdit = (item) => {
     lng: item.longitude ?? null,
   });
   setPickedRegion(null);
-  setCurrentArea(item.area || item.region || ""); // state baru, lihat di bawah
+  setCurrentArea(item.area || item.region || "");
 
   setPhotos(Array.isArray(item.photo) ? item.photo.map((url) => ({ url, file: null })) : []);
   setFacilities(itemFacilities);
@@ -177,7 +175,6 @@ const openEdit = (item) => {
   setMode("edit");
 };
 
-  // ---------- Foto ----------
   const setPhoto = (index, file) => {
     if (!file) return;
     setPhotos((prev) =>
@@ -188,7 +185,6 @@ const openEdit = (item) => {
     setPhotos((prev) => prev.map((p, i) => (i === index ? null : p)));
   const addPhotoSlot = () => setPhotos((prev) => [...prev, null]);
 
-  // ---------- Fasilitas ----------
   const toggleFacility = (name) =>
     setFacilities((prev) =>
       prev.includes(name) ? prev.filter((f) => f !== name) : [...prev, name]
@@ -219,7 +215,6 @@ const openEdit = (item) => {
   setSaving(true);
 
   try {
-    // Pospam lain yang memakai fasilitas ini
     const affected = pospamList.filter(
       (p) => p.id !== selectedId && (p.facility || []).includes(name)
     );
@@ -249,7 +244,6 @@ const openEdit = (item) => {
   }
 };
 
-  // ---------- Simpan & Hapus ----------
 const handleSubmit = async (e) => {
   e.preventDefault();
   if (saving) return;
@@ -261,7 +255,7 @@ const handleSubmit = async (e) => {
 
   const namaSudahAda = pospamList.some(
   (p) =>
-    p.id !== selectedId && // saat edit, diri sendiri tidak dihitung
+    p.id !== selectedId &&
     (p.name || "").trim().toLowerCase() === form.name.trim().toLowerCase()
 );
 
@@ -270,7 +264,6 @@ const handleSubmit = async (e) => {
     return;
   }
 
-  // Validasi lokasi dilakukan SEBELUM upload foto agar tidak ada upload yang sia-sia
   if (form.lat == null || form.lng == null) {
     toast.warning("Tentukan lokasi pospam pada peta (klik peta atau geser pin).");
     return;
@@ -282,7 +275,7 @@ const handleSubmit = async (e) => {
       photos.filter(Boolean).map((p) => (p.file ? uploadFotoPospam(p.file) : p.url))
     );
 
-    const areaStr = formatRegion(form.region); // kosong jika belum dipilih
+    const areaStr = formatRegion(form.region);
 
     const payload = {
       name: form.name,
@@ -297,10 +290,9 @@ const handleSubmit = async (e) => {
     };
 
     if (mode === "add") {
-      // region wajib lolos validasi; untuk admin_wilayah akan ditimpa BE dari akun login
       await createPospam({ ...payload, region: areaStr || "-" });
     } else {
-      await updatePospam(selectedId, payload); // region sengaja tidak dikirim
+      await updatePospam(selectedId, payload);
     }
 
     const wasAdd = mode === "add";
@@ -341,10 +333,8 @@ const handleDelete = async () => {
   return (
     <div className="min-h-[calc(100vh-72px)] bg-[#eceef7] font-sans pb-10">
       <main className="w-[calc(100%-3rem)] max-w-7xl mx-auto pt-5 space-y-4">
-        {/* Judul */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            {/* Ganti icon MapPin dengan Image at-icons_location.png */}
             <div className="w-17 h-17 relative shrink-0">
                 <Image 
                     src="/icons_location.png" 
@@ -675,7 +665,7 @@ const handleDelete = async () => {
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           ) : (
-                            <span className="w-7" /> // ruang kosong agar checkbox tetap sejajar
+                            <span className="w-7" />
                           )}
                         </div>
                       </div>

@@ -1,19 +1,15 @@
 import supabase, { supabaseAdmin } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
-
-// #NA
 import { regionNonaktif, kecualiRegion } from "../utils/regionNonaktif.js";
 
-// Helper verifikasi hak akses wilayah
 function pastikanAksesWilayah(reqUser, targetRegion) {
   if (reqUser.role !== "super_admin" && reqUser.region !== targetRegion) {
     throw new HttpError(403, "Anda tidak memiliki akses ke data wilayah ini");
   }
 }
 
-// Nama instansi harus unik dalam satu wilayah (tidak peka huruf besar/kecil)
 async function pastikanNamaUnik(agencyName, region, ignoreId = null) {
-  const pola = agencyName.trim().replace(/[%_\\]/g, "\\$&"); // tanpa wildcard = cocok persis
+  const pola = agencyName.trim().replace(/[%_\\]/g, "\\$&");
   let query = supabaseAdmin
     .from("nomor_darurat")
     .select("id")
@@ -27,10 +23,7 @@ async function pastikanNamaUnik(agencyName, region, ignoreId = null) {
   if (data.length) throw new HttpError(409, "Nama instansi sudah terdaftar di wilayah ini");
 }
 
-/* ------------------------------------------------------------------ */
-/* Publik                                                             */
-/* ------------------------------------------------------------------ */
-
+/* Publik*/
 // Ambil daftar nomor darurat (Bisa filter per region, kategori, pencarian q)
 export const listNomorDarurat = wrap(async (req, res) => {
   const { region, category, q, page = 1, limit = 10 } = req.valid.query;
@@ -47,7 +40,6 @@ export const listNomorDarurat = wrap(async (req, res) => {
     query = query.or(`agency_name.ilike.%${aman}%,telephone.ilike.%${aman}%`);
   }
 
-  // #NA Sembunyikan nomor darurat milik admin nonaktif  ← TAMBAH (3 baris)
   const nonaktif = await regionNonaktif();
   query = kecualiRegion(query, nonaktif);
 
@@ -61,14 +53,11 @@ export const listNomorDarurat = wrap(async (req, res) => {
   });
 });
 
-/* ------------------------------------------------------------------ */
-/* Admin Management                                                   */
-/* ------------------------------------------------------------------ */
 
+/* Admin Management*/
 export const createNomorDarurat = wrap(async (req, res) => {
   const body = req.valid.body;
 
-  // Jika admin_wilayah, paksa region dari akun login & cegah input "NASIONAL"
   if (req.user.role !== "super_admin") {
     body.region = req.user.region;
   }
@@ -84,7 +73,6 @@ export const createNomorDarurat = wrap(async (req, res) => {
     .select()
     .single();
 
-  // if (error) throw error;
   if (error) {
     console.error("=== DETAIL ERROR SUPABASE ===", error);
     return res.status(500).json({

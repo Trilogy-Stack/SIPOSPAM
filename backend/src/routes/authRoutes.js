@@ -2,7 +2,7 @@ import { Router } from "express";
 import { login, me, gantiPassword } from "../controller/authController.js";
 import { authRole } from "../middleware/authAdmin.js";
 import { validate } from "../middleware/validate.js";
-import { loginBody, gantiPasswordBody } from "../middleware/validate.js"; // sesuaikan nama schema validasinya
+import { loginBody, gantiPasswordBody } from "../middleware/validate.js";
 
 const router = Router();
 

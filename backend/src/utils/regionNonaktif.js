@@ -1,5 +1,3 @@
-// FILE BARU UNTUK MENYEMBUNYIKAN DATA POSPAM DAN NOMOR DARURAT MILIK ADMIN NONAKTIF
-
 import { supabaseAdmin } from "../config/supabase.js";
 
 // Daftar region milik admin yang dinonaktifkan

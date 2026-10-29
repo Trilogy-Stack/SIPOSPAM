@@ -1,11 +1,8 @@
 import { supabase, BUCKET_FOTO, supabaseAdmin } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 import { deteksiTipeGambar } from "../middleware/upload.js";
-
-// #NA
 import { regionNonaktif, kecualiRegion } from "../utils/regionNonaktif.js";
 
-// Helper verifikasi hak akses wilayah
 function pastikanAksesWilayah(reqUser, targetRegion) {
   if (reqUser.role !== "super_admin" && reqUser.region !== targetRegion) {
     throw new HttpError(403, "Anda tidak memiliki akses ke data wilayah ini");
@@ -14,7 +11,7 @@ function pastikanAksesWilayah(reqUser, targetRegion) {
 
 // Nama pospam harus unik dalam satu wilayah (tidak peka huruf besar/kecil)
 async function pastikanNamaUnik(name, region, ignoreId = null) {
-  const pola = name.trim().replace(/[%_\\]/g, "\\$&"); // tanpa wildcard = cocok persis
+  const pola = name.trim().replace(/[%_\\]/g, "\\$&"); 
   let query = supabaseAdmin
     .from("pospam")
     .select("id")
@@ -40,15 +37,11 @@ function normalisasiNomorPospam(nomor) {
   return hasil;
 }
 
-/* ------------------------------------------------------------------ */
-/* Public & Peta                                                      */
-/* ------------------------------------------------------------------ */
-
+/* Public & Peta*/
 // Daftar pospam (dengan paginasi & pencarian)
 export const listPospam = wrap(async (req, res) => {
   let { region, q, page = 1, limit = 10 } = req.valid.query;
 
-  // Admin wilayah hanya boleh melihat wilayahnya sendiri
   if (req.user && req.user.role !== "super_admin") {
     region = req.user.region;
   }
@@ -65,7 +58,6 @@ export const listPospam = wrap(async (req, res) => {
     query = query.or(`name.ilike.%${aman}%,location.ilike.%${aman}%`);
   }
 
-  // #NA Sembunyikan pospam milik admin nonaktif
   const nonaktif = await regionNonaktif();
   query = kecualiRegion(query, nonaktif);
 
@@ -90,7 +82,6 @@ export const petaPospam = wrap(async (req, res) => {
 
   if (region) query = query.eq("region", region);
 
-  // #NA Sembunyikan pospam milik admin nonaktif
   const nonaktif = await regionNonaktif();
   query = kecualiRegion(query, nonaktif);
 
@@ -113,7 +104,6 @@ export const getPospam = wrap(async (req, res) => {
   if (error) throw error;
   if (!data) throw new HttpError(404, "Pospam tidak ditemukan");
 
-// #NA Pospam milik admin nonaktif dianggap tidak ada
   if ((await regionNonaktif()).includes(data.region)) {
     throw new HttpError(404, "Pospam tidak ditemukan");
   }
@@ -121,10 +111,8 @@ export const getPospam = wrap(async (req, res) => {
   res.json({ data });
 });
 
-/* ------------------------------------------------------------------ */
-/* Admin Management & Upload Foto                                     */
-/* ------------------------------------------------------------------ */
 
+/* Admin Management & Upload Foto*/
 // Unggah foto fasilitas ke Supabase Storage (Mengembalikan URL Publik)
 export const uploadFotoPospam = wrap(async (req, res) => {
   if (!req.file) throw new HttpError(400, "Tidak ada berkas foto yang diunggah");
@@ -156,7 +144,6 @@ export const uploadFotoPospam = wrap(async (req, res) => {
 export const createPospam = wrap(async (req, res) => {
   const body = req.valid.body;
 
-  // Jika admin_wilayah, paksa region dari akun login
   if (req.user.role !== "super_admin") {
     body.region = req.user.region;
   }

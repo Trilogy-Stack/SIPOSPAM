@@ -1,26 +1,18 @@
-// src/hooks/useUnsavedChanges.js
 "use client";
 import { useEffect } from "react";
 
 export const UNSAVED_MESSAGE =
   "Perubahan belum disimpan. Jika Anda meninggalkan halaman ini, data yang diisi akan hilang.";
 
-/**
- * Menampilkan peringatan bawaan peramban selama `dirty` = true:
- *  1. Menutup tab / refresh / mengetik URL lain  -> dialog "beforeunload"
- *  2. Klik link internal (menu Navbar, logo, dsb.) -> window.confirm
- * Catatan: tombol "Back" peramban tidak tercakup.
- */
 export function useUnsavedChanges(dirty, message = UNSAVED_MESSAGE) {
   useEffect(() => {
     if (!dirty) return;
 
     const onBeforeUnload = (e) => {
       e.preventDefault();
-      e.returnValue = ""; // wajib agar Chrome menampilkan dialog
+      e.returnValue = ""; 
     };
 
-    // Fase capture di document: berjalan sebelum handler Next <Link>
     const onClick = (e) => {
       if (e.defaultPrevented || e.button !== 0) return;
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -37,7 +29,7 @@ export function useUnsavedChanges(dirty, message = UNSAVED_MESSAGE) {
         return;
       }
       if (url.origin !== window.location.origin) return;
-      // Sama persis dengan halaman sekarang (atau hanya hash): bukan berpindah halaman
+
       if (url.pathname === window.location.pathname && url.search === window.location.search) return;
 
       if (!window.confirm(message)) {

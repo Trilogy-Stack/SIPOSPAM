@@ -49,7 +49,6 @@ export const listAdmin = wrap(async (req, res) => {
 export const createAdmin = wrap(async (req, res) => {
   const { name, email, password, region, role = "admin_wilayah" } = req.valid.body;
 
-  // Gunakan supabaseAdmin (bukan supabase biasa)
   const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
@@ -58,7 +57,6 @@ export const createAdmin = wrap(async (req, res) => {
 
   if (authErr) throw errorAuth(authErr);
 
-  // Simpan profil di tabel profiles pakai client biasa/admin
   const { error: errProfil } = await supabaseAdmin.from("profiles").insert({
     id: authData.user.id,
     name,
@@ -69,7 +67,6 @@ export const createAdmin = wrap(async (req, res) => {
     must_change_password: true,
   });
 
-  // Rollback pakai supabaseAdmin jika simpan profil gagal
   if (errProfil) {
     await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
     throw errProfil;
@@ -93,7 +90,7 @@ export const updateAdmin = wrap(async (req, res) => {
   const { id } = req.valid.params;
   const { name, email, region, role, is_active } = req.valid.body;
 
-  const targetAdmin = await ambilAdmin(id); // Memastikan ID ada
+  const targetAdmin = await ambilAdmin(id); 
 
   if (role != undefined && targetAdmin.role === "super_admin" && role !== "super_admin") {
     const { count, error: countError } = await supabaseAdmin
@@ -108,7 +105,6 @@ export const updateAdmin = wrap(async (req, res) => {
     }
   }
 
-  // Update email di Supabase Auth jika berubah
   if (email !== undefined) {
     const { error: errAuth } = await supabaseAdmin.auth.admin.updateUserById(id, {
       email,
@@ -135,37 +131,11 @@ export const updateAdmin = wrap(async (req, res) => {
   });
 });
 
-// 4. Hapus akun admin
-// export const deleteAdmin = wrap(async (req, res) => {
-//   const { id } = req.valid.params;
-  
-//   const targetAdmin = await ambilAdmin(id);
-
-//   if (targetAdmin.role === "super_admin") {
-//     const { count, error: countError } = await supabaseAdmin
-//       .from("profiles")
-//       .select("*", { count: "exact", head: true })
-//       .eq("role", "super_admin");
-    
-//     if (countError) throw countError;
-
-//     if (count <= 1) {
-//       throw new HttpError(400, "Aksi ditolak. Setidaknya ada satu Super Admin yang terdaftar!");
-//     }
-//   }
-
-//   const { error } = await supabaseAdmin.auth.admin.deleteUser(id); // Profil ikut terhapus otomatis (cascade)
-//   if (error) throw error;
-
-//   res.json({ message: "Akun admin berhasil dihapus" });
-// });
-
 // 4. Hapus permanen akun admin nonaktif beserta data wilayahnya
 export const deleteAdmin = wrap(async (req, res) => {
   const { id } = req.valid.params;
   const { password } = req.valid.body;
 
-  // Konfirmasi: password superadmin yang sedang login
   const { error: errPw } = await createStatelessClient().auth.signInWithPassword({
     email: req.user.email,
     password,
@@ -188,7 +158,6 @@ export const deleteAdmin = wrap(async (req, res) => {
   const marker = `/${bucket}/`;
 
   if (admin.region) {
-    // Kumpulkan path foto dulu sebelum barisnya dihapus
     const { data: pos } = await supabaseAdmin.from("pospam").select("photo").eq("region", admin.region);
     const fotoPaths = (pos ?? [])
       .flatMap((p) => (Array.isArray(p.photo) ? p.photo : []))
@@ -198,20 +167,17 @@ export const deleteAdmin = wrap(async (req, res) => {
       })
       .filter(Boolean);
 
-    // Hapus data wilayah ini
     const { error: e1 } = await supabaseAdmin.from("pospam").delete().eq("region", admin.region);
     if (e1) throw e1;
     const { error: e2 } = await supabaseAdmin.from("nomor_darurat").delete().eq("region", admin.region);
     if (e2) throw e2;
 
-    // Bersihkan foto (tidak menggagalkan penghapusan akun kalau gagal)
     if (fotoPaths.length) {
       const { error: eFoto } = await supabaseAdmin.storage.from(bucket).remove(fotoPaths);
       if (eFoto) console.error("Gagal menghapus foto:", eFoto.message);
     }
   }
 
-  // Profil dan akun Auth
   const { error: e3 } = await supabaseAdmin.from("profiles").delete().eq("id", id);
   if (e3) throw e3;
 

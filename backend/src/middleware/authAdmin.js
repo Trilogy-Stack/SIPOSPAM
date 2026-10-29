@@ -1,5 +1,3 @@
-// INI UDA TAK SESUAIKAN
-
 import { supabase, supabaseAdmin } from "../config/supabase.js";
 import { HttpError, wrap } from "../utils/http.js";
 
@@ -23,7 +21,6 @@ export const authRole = (...rolesDiizinkan) =>
     if (errProfil) throw errProfil;
     if (!profil) throw new HttpError(403, "Profil akun tidak ditemukan");
     
-    // Cek apakah akun dinonaktifkan (Soft Delete)
     if (profil.is_active === false) {
       throw new HttpError(403, "Akun Anda telah dinonaktifkan. Silakan hubungi Superadmin");
     }

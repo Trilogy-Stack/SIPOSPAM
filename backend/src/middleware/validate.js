@@ -1,9 +1,5 @@
 import { z } from "zod";
 
-/* ------------------------------------------------------------------ */
-/* Helper Validasi                                                    */
-/* ------------------------------------------------------------------ */
-
 export const validate = (skema) => (req, res, next) => {
   req.valid = {};
 
@@ -32,10 +28,6 @@ export const validate = (skema) => (req, res, next) => {
   next();
 };
 
-/* ------------------------------------------------------------------ */
-/* Potongan Skema Reusable                                            */
-/* ------------------------------------------------------------------ */
-
 export const KATEGORI = ["bencana", "medis", "keamanan", "bbm", "bengkel"];
 
 const uuid = z.string().uuid("ID tidak valid");
@@ -61,16 +53,8 @@ const email = z.string().trim().toLowerCase().email("Email tidak valid");
 const NOMOR_KONTAK = /^(0|62|\+62)[0-9\-\s()]{4,20}$/;
 const NOMOR_TELEPON = /^[0-9+\-\s()]{2,25}$/;
 
-/* ------------------------------------------------------------------ */
-/* Params                                                             */
-/* ------------------------------------------------------------------ */
-
 export const idParam = z.object({ id: uuid });
 export const idFotoParam = z.object({ id: uuid, fotoId: uuid });
-
-/* ------------------------------------------------------------------ */
-/* Auth Body Schema                                                   */
-/* ------------------------------------------------------------------ */
 
 export const loginBody = z.object({
   email,
@@ -86,10 +70,6 @@ export const gantiPasswordBody = z
     message: "Password baru harus berbeda dari password lama",
     path: ["password_baru"],
   });
-
-/* ------------------------------------------------------------------ */
-/* Query                                                              */
-/* ------------------------------------------------------------------ */
 
 export const pospamListQuery = z.object({
   region: z.string().trim().max(100).optional(),
@@ -126,10 +106,6 @@ export const adminListQuery = z.object({
   q: z.string().trim().max(100).optional(),
 });
 
-/* ------------------------------------------------------------------ */
-/* Body                                                               */
-/* ------------------------------------------------------------------ */
-
 export const pospamBody = z.object({
   name: teks(150),
   koor_name: opsional(100),
@@ -148,7 +124,6 @@ export const fotoBody = z.object({
   urutan: z.coerce.number().int().min(1).max(4),
 });
 
-// Skema dasar nomor darurat sebelum penambahan logika kondisional
 const baseNomorDaruratSchema = z.object({
   agency_name: teks(150),
   telephone: z.string().trim().regex(NOMOR_TELEPON, "Nomor telepon tidak valid"), 
@@ -162,7 +137,6 @@ const baseNomorDaruratSchema = z.object({
 });
 
 export const nomorDaruratBody = baseNomorDaruratSchema.superRefine((data, ctx) => {
-  // Validasi tambahan khusus jika BUKAN nomor darurat nasional
   if (data.region !== "NASIONAL") {
     if (!data.category) {
       ctx.addIssue({

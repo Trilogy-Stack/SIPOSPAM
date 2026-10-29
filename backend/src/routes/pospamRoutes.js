@@ -21,25 +21,14 @@ import {
 
 const router = Router();
 
-/* ------------------------------------------------------------------ */
-/* RUTE PUBLIK (Bisa diakses siapapun)                                */
-/* ------------------------------------------------------------------ */
-
-// Catatan: Route statis (/peta) WAJIB ditaruh sebelum "/:id"
 router.get("/", validate({ query: pospamListQuery }), listPospam);
 router.get("/peta", validate({ query: petaQuery }), petaPospam);
 router.get("/:id", validate({ params: idParam }), getPospam);
 
-/* ------------------------------------------------------------------ */
-/* RUTE TERPROTEKSI (Superadmin & Admin Wilayah)                       */
-/* ------------------------------------------------------------------ */
-
 router.use(authRole("super_admin", "admin_wilayah"));
 
-// Unggah foto fasilitas ke Storage (Mengembalikan URL gambar)
 router.post("/upload", uploadFoto, uploadFotoPospam);
 
-// CRUD Pospam
 router.post("/", validate({ body: pospamBody }), createPospam);
 router.put("/:id", validate({ params: idParam, body: pospamUpdateBody }), updatePospam);
 router.delete("/:id", validate({ params: idParam }), deletePospam);

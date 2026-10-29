@@ -7,9 +7,8 @@ export default function OneTapCall() {
   const [showModal, setShowModal] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
 
-  const NOMOR_WA_TEST = "6281391121411"; // no zdn
+  const TARGET_NUMBER = "082324609083"; // ganti dengan "110"
 
-  // Mendengarkan trigger dari tombol 110 di Header Desktop
   useEffect(() => {
     const handleOpenModal = () => setShowModal(true);
     window.addEventListener("open-110-modal", handleOpenModal);
@@ -20,10 +19,7 @@ export default function OneTapCall() {
     setShowModal(false);
     setIsChecked(false);
 
-    window.open(
-      `https://wa.me/${NOMOR_WA_TEST}?text=Halo,%20ini%20uji%20coba%20fitur%20panggilan%20darurat%20110%20SIPOSPAM`,
-      "_blank"
-    );
+    window.location.href = `tel:${TARGET_NUMBER}`;
   };
 
   return (

@@ -33,10 +33,8 @@ const FACILITY_ICON = {
 const cardClass = "bg-white rounded-xl shadow-sm p-5 border border-slate-100";
 const menuButtonClass =
   "bg-[#1b9fb8] hover:bg-[#158aa0] transition text-white py-10 md:py-12 rounded-xl font-bold text-xl md:text-2xl shadow-sm text-center flex items-center justify-center";
-// "all" = tampilkan semua data
 const limitOf = (v) => (v === "all" ? Infinity : Number(v));
 
-// ---------- Normalisasi data backend ----------
 const normalizePospam = (p) => ({
   id: p.id,
   name: p.name || "",
@@ -63,7 +61,6 @@ const normalizeEmergency = (e) => ({
   lng: e.lng ?? e.longitude ?? null,
 });
 
-// ---------- Format koordinat ----------
 const toDMS = (deg, pos, neg) => {
   const abs = Math.abs(deg);
   const d = Math.floor(abs);
@@ -75,7 +72,6 @@ const toDMS = (deg, pos, neg) => {
 const formatCoord = (lat, lng) =>
   lat == null || lng == null ? "-" : `${toDMS(lat, "N", "S")} ${toDMS(lng, "E", "W")}`;
 
-// ---------- Komponen kecil ----------
 function MapEmbed({ lat, lng }) {
   if (lat == null || lng == null) {
     return (
@@ -171,7 +167,6 @@ function EmptyDetail() {
   );
 }
 
-// ---------- Halaman ----------
 export default function AdminDashboardPage() {
   const { profile } = useAuth();
 
@@ -231,7 +226,6 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.role, profile?.region]);
 
   const filteredEmergency = emergencyList.filter((item) =>
@@ -375,7 +369,6 @@ export default function AdminDashboardPage() {
                           title="Klik untuk melihat foto"
                           className="group relative aspect-square rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-[#1a9fb8]"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={url}
                             alt={`Foto fasilitas ${i + 1}`}
