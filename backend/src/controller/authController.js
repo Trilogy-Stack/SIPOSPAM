@@ -5,7 +5,6 @@ import { HttpError, wrap } from "../utils/http.js";
 export const login = wrap(async (req, res) => {
   const { email, password } = req.valid.body;
 
-  // Verifikasi email & password ke Supabase Auth (pakai client biasa)
   const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -15,7 +14,6 @@ export const login = wrap(async (req, res) => {
     throw new HttpError(401, "Email atau password salah");
   }
 
-  // Ambil data profil dari tabel profiles memakai supabaseAdmin (Bypass RLS)
   const { data: profil, error: errProfil } = await supabaseAdmin
     .from("profiles")
     .select("name, role, region, must_change_password, is_active")
@@ -26,7 +24,6 @@ export const login = wrap(async (req, res) => {
     throw new HttpError(403, "Profil akun tidak ditemukan");
   }
 
-  // Blokir login jika akun telah dinonaktifkan (Soft Delete)
   if (profil.is_active === false) {
     throw new HttpError(403, "Akun Anda telah dinonaktifkan. Silakan hubungi Superadmin");
   }
@@ -53,12 +50,9 @@ export const me = wrap(async (req, res) => {
 });
 
 // 3. Dipakai admin baru di login pertama (dan boleh kapan saja sesudahnya)
-//    Wajib menyertakan password lama, supaya sesi yang tertinggal terbuka tidak bisa
-//    dipakai orang lain untuk mengganti password.
 export const gantiPassword = wrap(async (req, res) => {
   const { password_lama, password_baru } = req.valid.body;
 
-  // Verifikasi password lama dengan client sementara (tidak menyimpan sesi)
   const { error: errLama } = await createStatelessClient().auth.signInWithPassword({
     email: req.user.email,
     password: password_lama,
@@ -70,7 +64,6 @@ export const gantiPassword = wrap(async (req, res) => {
     throw new HttpError(400, "Password lama salah");
   }
 
-  // Gunakan supabaseAdmin untuk update user di Auth
   const { error } = await supabaseAdmin.auth.admin.updateUserById(req.user.id, {
     password: password_baru,
   });
@@ -81,7 +74,6 @@ export const gantiPassword = wrap(async (req, res) => {
     throw error;
   }
 
-  // Gunakan supabaseAdmin untuk update status must_change_password di profiles
   const { error: errProfil } = await supabaseAdmin
     .from("profiles")
     .update({ must_change_password: false })
