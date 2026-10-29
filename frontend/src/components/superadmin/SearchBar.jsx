@@ -1,4 +1,3 @@
-// src/components/superadmin/SearchBar.jsx
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
@@ -15,7 +14,6 @@ export default function SearchBar({
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
-  // Tutup dropdown kalau klik di luar atau tekan Esc
   useEffect(() => {
     const handleClick = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -31,8 +29,6 @@ export default function SearchBar({
     };
   }, []);
 
-  // Kalau isi input persis sama dengan salah satu opsi (hasil pilihan),
-  // tampilkan semua opsi lagi, bukan hanya opsi itu
   const norm = (s) => s.trim().toLowerCase();
   const exactMatch = options.some((o) => norm(o) === norm(value));
   const query = exactMatch ? "" : norm(value);
@@ -43,7 +39,6 @@ export default function SearchBar({
       ? [{ label: "Semua wilayah", val: "" }, ...filtered.map((o) => ({ label: o, val: o }))]
       : filtered.map((o) => ({ label: o, val: o }));
 
-  // Gulirkan item yang disorot (navigasi keyboard) agar tetap terlihat
   useEffect(() => {
     if (open && active >= 0) {
       listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
@@ -59,7 +54,7 @@ export default function SearchBar({
   const handleInput = (e) => {
     onChange(e.target.value);
     setOpen(true);
-    setActive(0); // Enter langsung memilih hasil teratas
+    setActive(0);
   };
 
   const handleKeyDown = (e) => {
@@ -119,7 +114,7 @@ export default function SearchBar({
               <li key={item.label} role="option" aria-selected={value === item.val}>
                 <button
                   type="button"
-                  onMouseDown={(e) => e.preventDefault()} // jaga fokus input saat klik
+                  onMouseDown={(e) => e.preventDefault()} 
                   onClick={() => pick(item.val)}
                   onMouseEnter={() => setActive(i)}
                   className={`w-full px-3.5 py-2 text-left text-[13px] ${

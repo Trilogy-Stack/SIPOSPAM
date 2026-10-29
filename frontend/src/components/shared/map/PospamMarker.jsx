@@ -1,4 +1,3 @@
-// src/components/shared/map/PospamMarker.jsx
 "use client";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";

@@ -1,9 +1,6 @@
-// src/lib/coverage.js
-// Bentuk area per wilayah di peta
 
 const M_PER_DEG_LAT = 111320;
 
-// Proyeksi lat/lng <-> meter lokal -
 function makeProjection(points) {
   const lat0 = points.reduce((s, p) => s + p.lat, 0) / points.length;
   const lng0 = points.reduce((s, p) => s + p.lng, 0) / points.length;
@@ -15,11 +12,11 @@ function makeProjection(points) {
   };
 }
 
-// Geometri dasar (titik berformat [x, y]) 
+
 const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
-// Convex hull 
+
 function convexHull(points) {
   const pts = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   if (pts.length < 3) return pts;
@@ -55,7 +52,6 @@ function inTriangle(p, a, b, c) {
   return (d1 > 0 && d2 > 0 && d3 > 0) || (d1 < 0 && d2 < 0 && d3 < 0);
 }
 
-// Rata-rata jarak tiap titik 
 function meanNearestDistance(pts) {
   let sum = 0;
   for (const p of pts) {
@@ -123,7 +119,7 @@ function concaveHull(pts, concavity) {
   return hull;
 }
 
-// Garis keliling titik pospam terluar
+
 export function buildOutline(points, concavity = 2.5) {
   if (!points.length) return [];
   const { toXY, toLatLng } = makeProjection(points);

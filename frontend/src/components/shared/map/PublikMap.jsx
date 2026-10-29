@@ -1,6 +1,5 @@
-// src/components/shared/map/PublikMap.jsx
-// Peta untuk halaman publik: titik pospam + titik lokasi pemudik (kalau lokasi diaktifkan).
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
@@ -8,13 +7,10 @@ import "leaflet/dist/leaflet.css";
 import PospamMarker from "./PospamMarker";
 import { JATENG_BOUNDS } from "@/lib/mapConfig";
 
-// Saat lokasi aktif, peta dipas-kan ke posisi pemudik + sekian pospam terdekat
-// (daftar dari halaman sudah terurut dari yang terdekat)
 const NEAREST = 5;
 
 const num = (v) => (v == null || v === "" ? NaN : Number(v));
 
-// Menyesuaikan tampilan setiap kali daftar titik atau posisi pemudik berubah
 function FitView({ points, userCoords }) {
   const map = useMap();
 
@@ -46,9 +42,8 @@ const TILES = {
 };
 
 export default function PublikMap({ pospams = [], userCoords = null }) {
-  const [mode, setMode] = useState("peta"); // "peta" | "satelit"
+  const [mode, setMode] = useState("peta");
 
-  // Hanya titik yang koordinatnya valid; PospamMarker membaca nama dari field "nama"
   const points = useMemo(
     () =>
       pospams

@@ -7,7 +7,6 @@ export default function PhotoLightbox({ photos = [], index, onClose, onChange })
   const total = photos.length;
   const open = index !== null && index !== undefined && index >= 0 && index < total;
 
-  // Tombol keyboard: Esc menutup, panah kiri/kanan berpindah foto
   useEffect(() => {
     if (!open) return;
 
@@ -18,7 +17,7 @@ export default function PhotoLightbox({ photos = [], index, onClose, onChange })
     };
 
     window.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden"; // cegah halaman ikut bergulir
+    document.body.style.overflow = "hidden";
 
     return () => {
       window.removeEventListener("keydown", onKey);
@@ -69,7 +68,6 @@ export default function PhotoLightbox({ photos = [], index, onClose, onChange })
         </>
       )}
 
-      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={photos[index]}
         alt={`Foto fasilitas ${index + 1}`}
