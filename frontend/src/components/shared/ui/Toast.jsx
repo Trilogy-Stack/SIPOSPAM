@@ -9,13 +9,6 @@ const STYLE = {
   warning: { Icon: AlertTriangle, box: "border-amber-200 bg-amber-50 text-amber-900", icon: "text-amber-600", ms: 5000 },
 };
 
-/**
- * Pemakaian:
- *   const { toasts, toast, dismiss } = useToast();
- *   toast.success("Tersimpan"); toast.error("Gagal"); toast.warning("Lengkapi data");
- *   ...
- *   <ToastContainer toasts={toasts} onDismiss={dismiss} />
- */
 export function useToast() {
   const [toasts, setToasts] = useState([]);
   const timers = useRef(new Map());

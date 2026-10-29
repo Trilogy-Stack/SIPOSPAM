@@ -45,7 +45,7 @@ export default function LoginForm() {
           </div>
         </div>
 
-        {/* Judul & Subjudul (Universal untuk Admin & Superadmin) */}
+        {/* Judul & Subjudul untuk Admin & Superadmin */}
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-1">
             Selamat Datang!
@@ -57,7 +57,6 @@ export default function LoginForm() {
 
         {/* Form Login */}
         <form onSubmit={handleSubmit} className="w-full flex flex-col gap-4">
-          {/* Email / Username */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">
               Nama pengguna/Email
@@ -72,7 +71,7 @@ export default function LoginForm() {
             />
           </div>
 
-          {/* Password with Eye Toggle */}
+          {/* Password */}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">
               Kata sandi

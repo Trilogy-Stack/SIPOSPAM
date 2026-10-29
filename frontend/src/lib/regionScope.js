@@ -5,7 +5,7 @@ export function getRegionScope(profile) {
   // Super admin melihat semua wilayah
   if (profile.role === "super_admin") return { ready: true, blocked: false, params: {} };
 
-  // Admin wilayah tanpa data wilayah: jangan ambil data sama sekali
+  // Admin wilayah tanpa data wilayah
   if (!profile.region) return { ready: true, blocked: true, params: {} };
 
   return { ready: true, blocked: false, params: { region: profile.region } };

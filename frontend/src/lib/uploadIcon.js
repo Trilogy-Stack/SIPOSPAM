@@ -1,7 +1,3 @@
-// src/lib/uploadIcon.js
-// Unggah ikon nomor darurat lewat endpoint BE (POST /api/pospam/upload).
-// BE yang menyimpan ke bucket Supabase "foto-pospam" dan mengembalikan URL publiknya,
-// jadi tidak perlu bucket/policy tambahan di Supabase.
 import { uploadFotoPospam } from "@/lib/api";
 
 const MAX_SIZE = 3 * 1024 * 1024; // 3 MB, sama dengan batas upload di BE

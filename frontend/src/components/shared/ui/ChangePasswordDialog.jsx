@@ -1,4 +1,3 @@
-// src/components/shared/ui/ChangePasswordDialog.jsx
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -8,15 +7,6 @@ import { gantiPassword } from "@/lib/api";
 
 const MIN_LENGTH = 8;
 
-/**
- * Dialog ganti password.
- *  - open     : tampilkan dialog
- *  - forced   : true = tidak bisa ditutup (dipakai saat login pertama, must_change_password)
- *  - onClose  : dipanggil saat dialog ditutup (hanya mode biasa)
- *  - onDone   : dipanggil beberapa saat setelah password berhasil diganti,
- *               dengan argumen { password_baru }
- *  - onLogout : tombol "Keluar" pada mode paksa
- */
 export default function ChangePasswordDialog({ open, forced = false, onClose, onDone, onLogout }) {
   const [lama, setLama] = useState("");
   const [baru, setBaru] = useState("");
@@ -26,7 +16,6 @@ export default function ChangePasswordDialog({ open, forced = false, onClose, on
   const [done, setDone] = useState(false);
   const timer = useRef(null);
 
-  // Kosongkan isian setiap dialog dibuka
   useEffect(() => {
     if (open) {
       setLama("");
@@ -40,7 +29,7 @@ export default function ChangePasswordDialog({ open, forced = false, onClose, on
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  // Esc menutup dialog (kecuali mode paksa atau sedang menyimpan)
+  // Esc menutup dialog
   useEffect(() => {
     if (!open || forced) return;
     const onKey = (e) => {

@@ -1,30 +1,23 @@
-// src/components/shared/ui/SendResetLinkDialog.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Mail, MailCheck, X } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
-const COOLDOWN_DETIK = 60; // jeda sebelum boleh kirim ulang (menghindari batas kirim email Supabase)
+const COOLDOWN_DETIK = 60; 
 
-// "budi.santoso@gmail.com" -> "bu***@gmail.com"
 function maskEmail(email = "") {
   const [name = "", domain = ""] = email.split("@");
   if (!domain) return email;
   return `${name.slice(0, 2)}***@${domain}`;
 }
 
-/**
- * Dialog konfirmasi: kirim link ganti password ke email akun yang sedang login.
- * Link membuka halaman /reset-password.
- */
 export default function SendResetLinkDialog({ open, email, onClose }) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
   const [cooldown, setCooldown] = useState(0);
 
-  // Kosongkan status setiap dialog dibuka
   useEffect(() => {
     if (open) {
       setSending(false);
@@ -41,7 +34,6 @@ export default function SendResetLinkDialog({ open, email, onClose }) {
     return () => clearTimeout(t);
   }, [cooldown]);
 
-  // Esc menutup dialog
   useEffect(() => {
     if (!open) return;
     const onKey = (e) => {

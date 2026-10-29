@@ -1,11 +1,7 @@
-// src/lib/rbac.js
-// Satu sumber aturan: role mana boleh mengakses prefix path mana.
-// Nama role mengikuti tabel profiles / backend (bukan "admin"/"superadmin" seperti sebelumnya).
-// Dipakai proxy.js (blokir di server) dan boleh dipakai komponen untuk menyembunyikan menu.
 export const ROLE_PREFIX = {
   super_admin: "/superadmin",
   admin_wilayah: "/admin",
-  admin: "/admin", // role lama; masih diizinkan oleh CHECK di tabel profiles
+  admin: "/admin", 
 };
 
 // Halaman awal tiap role setelah login
@@ -20,9 +16,9 @@ export function isAllowed(role, pathname) {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-// Slot session per area: akun /admin dan /superadmin disimpan di cookie berbeda,
-// sehingga dua role bisa login bersamaan di tab berbeda pada satu browser.
+// Slot session per area, akun /admin dan /superadmin disimpan di cookie berbeda
+// dua role bisa login bersamaan di tab berbeda pada satu browser.
 export const slotFor = (pathname = "") =>
-  pathname === "/superadmin" || pathname.startsWith("/superadmin/") ? "superadmin" : "admin";
+pathname === "/superadmin" || pathname.startsWith("/superadmin/") ? "superadmin" : "admin";
 export const slotForRole = (role) => (role === "super_admin" ? "superadmin" : "admin");
 export const cookieNameFor = (slot) => `sb-${slot}-auth-token`;

@@ -1,4 +1,3 @@
-// src/components/shared/ui/ProfileMenu.jsx
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, KeyRound, LogOut } from "lucide-react";
@@ -20,12 +19,9 @@ export default function ProfileMenu({ mobile = false }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 1. Cek role pengguna sesuai enum/string di database
   const isSuperAdmin = profile?.role === "super_admin";
   const isAdminWilayah = profile?.role === "admin_wilayah";
 
-  // 2. Nama tampilan: utamakan kolom `name` dari tabel profiles,
-  //    kalau kosong baru pakai fallback berdasarkan role
   const name =
     profile?.name ||
     (isSuperAdmin

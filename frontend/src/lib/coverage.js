@@ -1,12 +1,9 @@
 // src/lib/coverage.js
-// Bentuk area per wilayah di peta, dihitung dari titik-titik pospam (tanpa buffer/lingkaran per titik):
-//   - buildOutline : garis keliling yang menghubungkan titik pospam terluar (dipakai saat zoom dekat)
-//   - buildEllipse : lingkaran/lonjong sederhana yang menutupi semua titik (dipakai saat zoom jauh)
-// Semua perhitungan dilakukan dalam meter lokal (bukan derajat) supaya bentuknya tidak melar.
+// Bentuk area per wilayah di peta
 
 const M_PER_DEG_LAT = 111320;
 
-// ---------- Proyeksi lat/lng <-> meter lokal ----------
+// Proyeksi lat/lng <-> meter lokal -
 function makeProjection(points) {
   const lat0 = points.reduce((s, p) => s + p.lat, 0) / points.length;
   const lng0 = points.reduce((s, p) => s + p.lng, 0) / points.length;
@@ -18,11 +15,11 @@ function makeProjection(points) {
   };
 }
 
-// ---------- Geometri dasar (titik berformat [x, y]) ----------
+// Geometri dasar (titik berformat [x, y]) 
 const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
-// Convex hull (monotone chain), hasil berlawanan arah jarum jam
+// Convex hull 
 function convexHull(points) {
   const pts = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   if (pts.length < 3) return pts;
@@ -43,7 +40,6 @@ function convexHull(points) {
   return lower.concat(upper);
 }
 
-// Dua ruas p1-p2 dan p3-p4 saling memotong (titik ujung yang sama tidak dihitung)
 function segmentsCross(p1, p2, p3, p4) {
   const d1 = cross(p3, p4, p1);
   const d2 = cross(p3, p4, p2);
@@ -52,7 +48,6 @@ function segmentsCross(p1, p2, p3, p4) {
   return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
 }
 
-// p berada di dalam segitiga a-b-c (tepi tidak dihitung)
 function inTriangle(p, a, b, c) {
   const d1 = cross(a, b, p);
   const d2 = cross(b, c, p);
@@ -60,7 +55,7 @@ function inTriangle(p, a, b, c) {
   return (d1 > 0 && d2 > 0 && d3 > 0) || (d1 < 0 && d2 < 0 && d3 < 0);
 }
 
-// Rata-rata jarak tiap titik ke tetangga terdekatnya: ukuran "jarak antar pospam yang wajar"
+// Rata-rata jarak tiap titik 
 function meanNearestDistance(pts) {
   let sum = 0;
   for (const p of pts) {
@@ -71,13 +66,7 @@ function meanNearestDistance(pts) {
   return sum / pts.length;
 }
 
-// ---------- Garis keliling titik terluar ----------
-// Mulai dari convex hull (titik terluar), lalu sisi yang terlalu panjang "digali" ke dalam
-// lewat titik pospam terdekat, sehingga garis mengikuti sebaran titik (boleh cekung).
-// Setiap penggalian dijaga supaya: tidak ada titik yang tertinggal di luar garis,
-// dan garis tidak saling berpotongan.
-//   concavity: sisi dengan panjang > concavity x jarak antar-pospam rata-rata akan digali.
-//              Makin kecil = makin mengikuti titik (zigzag), makin besar = makin mendekati convex hull.
+// Garis keliling titik terluar 
 function concaveHull(pts, concavity) {
   let hull = convexHull(pts);
   if (hull.length < 3 || pts.length <= hull.length) return hull;
@@ -103,7 +92,7 @@ function concaveHull(pts, concavity) {
         if (dist(a, p) >= len || dist(p, b) >= len) continue;
         // titik harus berada di sisi dalam sisi a-b
         if (cross(a, b, p) <= 0) continue;
-        // segitiga a-p-b tidak boleh memuat titik lain (kalau ada, titik itu akan tertinggal di luar)
+        // segitiga a-p-b tidak boleh memuat titik lain 
         if (pts.some((q) => q !== p && q !== a && q !== b && inTriangle(q, a, p, b))) continue;
         // sisi baru a-p dan p-b tidak boleh memotong sisi lain
         let crossing = false;
@@ -134,8 +123,7 @@ function concaveHull(pts, concavity) {
   return hull;
 }
 
-// Garis keliling titik pospam terluar, format [[lat, lng], ...] siap untuk Leaflet:
-//   >= 3 titik berbeda -> poligon, 2 titik -> garis lurus, 1 titik -> 1 koordinat, kosong -> []
+// Garis keliling titik pospam terluar
 export function buildOutline(points, concavity = 2.5) {
   if (!points.length) return [];
   const { toXY, toLatLng } = makeProjection(points);
@@ -156,18 +144,12 @@ export function buildOutline(points, concavity = 2.5) {
   return hull.map(toLatLng);
 }
 
-// ---------- Lingkaran/lonjong penutup (untuk zoom jauh) ----------
-// Sumbu panjang mengikuti arah sebaran titik, jadi wilayah yang titiknya memanjang menjadi lonjong,
-// wilayah yang titiknya menyebar rata atau cuma satu titik menjadi hampir bulat.
-//   marginRatio : pembesaran dari ukuran minimum yang pas menutupi semua titik
-//   minRadiusM  : jari-jari minimum (meter) supaya wilayah kecil tetap terlihat saat zoom jauh
-//   maxAspect   : batas kelonjongan (sumbu panjang : sumbu pendek), supaya tidak jadi jarum
+// Lingkaran penutup (untuk zoom jauh) 
 export function buildEllipse(points, { marginRatio = 1.15, minRadiusM = 5000, maxAspect = 3, steps = 48 } = {}) {
   if (!points.length) return [];
   const { toXY, toLatLng } = makeProjection(points);
   const pts = points.map(toXY);
 
-  // arah sumbu utama dari kovarian titik (pusat proyeksi = rata-rata titik, jadi sudah terpusat)
   let sxx = 0, syy = 0, sxy = 0;
   for (const [x, y] of pts) {
     sxx += x * x;
@@ -175,7 +157,6 @@ export function buildEllipse(points, { marginRatio = 1.15, minRadiusM = 5000, ma
     sxy += x * y;
   }
 
-  // koordinat tiap titik pada sumbu panjang (u) dan sumbu pendek (v) untuk sudut theta
   const frame = (theta) => {
     const ux = Math.cos(theta), uy = Math.sin(theta);
     const uv = pts.map(([x, y]) => [x * ux + y * uy, -x * uy + y * ux]);
@@ -187,15 +168,12 @@ export function buildEllipse(points, { marginRatio = 1.15, minRadiusM = 5000, ma
 
   let theta = 0.5 * Math.atan2(2 * sxy, sxx - syy);
   let f = frame(theta);
-  if (f.rv > f.ru) f = frame((theta += Math.PI / 2)); // pastikan u adalah sisi yang lebih panjang
+  if (f.rv > f.ru) f = frame((theta += Math.PI / 2)); 
 
-  // Sumbu panjang minimal minRadiusM. Sumbu pendek boleh menyusut sampai separuh minRadiusM
-  // kalau sebarannya memang memanjang; satu titik tetap lingkaran. Tidak boleh lebih tipis dari 1/maxAspect.
   const t = Math.min(f.ru / minRadiusM, 1);
   let a = Math.max(f.ru, minRadiusM);
   let b = Math.max(f.rv, minRadiusM * (1 - 0.5 * t), a / maxAspect);
 
-  // perbesar sampai semua titik pasti berada di dalam elips
   const k = Math.sqrt(Math.max(...f.uv.map(([u, v]) => ((u - f.cu) / a) ** 2 + ((v - f.cv) / b) ** 2)));
   const scale = Math.max(k, 1) * marginRatio;
   a *= scale;
@@ -211,8 +189,6 @@ export function buildEllipse(points, { marginRatio = 1.15, minRadiusM = 5000, ma
   return ring;
 }
 
-// Kotak pembatas [[selatan, barat], [utara, timur]] dari daftar [lat, lng]; dipakai untuk terbang ke wilayah.
-// minHalfSpan (derajat) menjaga kotak tidak nol saat hanya ada satu titik, supaya zoom tidak terlalu dekat.
 export function boundsOf(latlngs, minHalfSpan = 0.015) {
   if (!latlngs.length) return null;
   let s = Infinity, w = Infinity, n = -Infinity, e = -Infinity;

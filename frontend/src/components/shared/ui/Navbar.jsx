@@ -1,4 +1,3 @@
-// src/components/shared/ui/Navbar.jsx
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -29,7 +28,7 @@ function Logo({ title, onClick }) {
   );
 }
 
-// Label peran di samping logo, mis. "Superadmin"
+// Label peran di samping logo, "Superadmin/Admin"
 function RoleBadge({ children }) {
   return (
     <span className="hidden items-center gap-3 sm:flex">
@@ -45,20 +44,17 @@ export default function Navbar({ title, items, badge }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Kalau ada form dengan perubahan belum tersimpan, tahan perpindahan dan minta konfirmasi dulu
   function guardedClick(e, href) {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; // buka tab baru: biarkan
-    if (!hasUnsavedChanges()) return; // navigasi normal
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return; 
+    if (!hasUnsavedChanges()) return; 
     e.preventDefault();
     runWithUnsavedGuard(() => router.push(href));
   }
 
-  // Tutup menu mobile setiap pindah halaman
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
-  // Tutup menu mobile dengan tombol Esc
   useEffect(() => {
     if (!menuOpen) return;
     const onKey = (e) => {
@@ -70,9 +66,7 @@ export default function Navbar({ title, items, badge }) {
 
   return (
     <nav className="sticky top-0 z-[1500] bg-[#3F5F6B] px-6 font-poppins text-white shadow-md">
-      {/* Isi navbar dibatasi selebar kotak putih konten (max-w-7xl) */}
       <div className="mx-auto flex w-full max-w-7xl items-center gap-4 py-3 lg:gap-6 xl:gap-8">
-        {/* Logo + label peran */}
         <div className="flex shrink-0 items-center gap-3 lg:mr-2 xl:mr-6">
           <Logo title={title} onClick={(e) => guardedClick(e, "/")} />
           {badge && <RoleBadge>{badge}</RoleBadge>}
@@ -97,7 +91,7 @@ export default function Navbar({ title, items, badge }) {
           })}
         </div>
 
-        {/* Profil desktop (menempel di kanan) */}
+        {/* Profil desktop */}
         <div className="hidden min-w-0 lg:ml-auto lg:block">
           <ProfileMenu />
         </div>
@@ -114,7 +108,7 @@ export default function Navbar({ title, items, badge }) {
         </button>
       </div>
 
-      {/* Panel menu mobile (melayang di bawah navbar, tidak mendorong isi halaman) */}
+      {/* Panel menu mobile */}
       {menuOpen && (
         <div className="absolute left-0 right-0 top-full border-t border-white/10 bg-[#3F5F6B] shadow-lg lg:hidden">
           <div className="mx-auto w-full max-w-7xl px-6 pb-4 pt-2">
@@ -147,7 +141,6 @@ export default function Navbar({ title, items, badge }) {
         </div>
       )}
 
-      {/* Memaksa ganti password pada login pertama (must_change_password = true) */}
       <ForcePasswordChange />
     </nav>
   );

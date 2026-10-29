@@ -1,10 +1,7 @@
-// src/components/shared/ui/Modal.jsx
 "use client";
 import { useEffect, useRef } from "react";
 
-// ── Penjaga perubahan yang belum disimpan ─────────────────────────────
-// Form memasang handler saat ada perubahan; Navbar memanggil runWithUnsavedGuard
-// sebelum pindah halaman supaya pengguna ditanya dulu.
+// dialog untuk perubahan yang belum disimpan 
 
 export function setUnsavedHandler(fn) {
   if (typeof window !== "undefined") window.__unsavedHandler = fn;
@@ -22,11 +19,10 @@ export function runWithUnsavedGuard(proceed) {
   }
 }
 
-// z-[1400] sengaja di bawah Navbar (z-[1500]) supaya navbar tetap terang dan bisa diklik.
+// navbar tetap terang dan bisa diklik
 export default function Modal({ open, onClose, title, children, closeOnBackdrop = true }) {
   const downOnBackdrop = useRef(false);
 
-  // Tutup dengan tombol Esc
   useEffect(() => {
     if (!open) return;
     const handleKey = (e) => {
@@ -40,7 +36,7 @@ export default function Modal({ open, onClose, title, children, closeOnBackdrop 
 
   return (
     <div
-      // Dianggap klik luar hanya kalau tekan DAN lepas mouse sama-sama di area luar
+      // klik luar dialog/area transparan
       onMouseDown={(e) => {
         downOnBackdrop.current = e.target === e.currentTarget;
       }}

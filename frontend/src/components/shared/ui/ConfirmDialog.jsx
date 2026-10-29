@@ -1,8 +1,6 @@
-// src/components/shared/ui/ConfirmDialog.jsx
 "use client";
 import Modal from "./Modal";
 
-// Dialog konfirmasi aksi berisiko (hapus / nonaktifkan). Semua isi rata tengah.
 export default function ConfirmDialog({
   open,
   onClose,
@@ -16,6 +14,7 @@ export default function ConfirmDialog({
   confirmDisabled = false,
   // icon: Icon = AlertTriangle,
 }) {
+  
   return (
     <Modal open={open} onClose={loading ? undefined : onClose} title={title}>
       <div className="flex flex-col items-center text-center">

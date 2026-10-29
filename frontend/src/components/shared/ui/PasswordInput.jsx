@@ -1,4 +1,3 @@
-// src/components/shared/ui/PasswordInput.jsx
 "use client";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
@@ -8,7 +7,7 @@ export default function PasswordInput({
   onChange,
   required = true,
   placeholder = "************",
-  autoComplete, // opsional; form login bisa diisi "current-password"
+  autoComplete, 
 }) {
   const [show, setShow] = useState(false);
   return (

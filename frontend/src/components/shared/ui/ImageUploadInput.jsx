@@ -1,4 +1,3 @@
-// src/components/shared/ui/ImageUploadInput.jsx
 "use client";
 import { useEffect, useState } from "react";
 import { ImagePlus } from "lucide-react";
@@ -7,7 +6,7 @@ export default function ImageUploadInput({ value, onChange }) {
   const [broken, setBroken] = useState(false);
   const preview = value && !broken ? value : null;
 
-  // Reset status gambar rusak setiap nilai berganti
+  // reset status gambar rusak setiap nilai berganti
   useEffect(() => {
     setBroken(false);
   }, [value]);
@@ -15,9 +14,8 @@ export default function ImageUploadInput({ value, onChange }) {
   function handleFile(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    // pratinjau sementara di browser; file asli diunggah induk saat tombol Simpan ditekan
     onChange(file, URL.createObjectURL(file));
-    e.target.value = ""; // memilih file yang sama dua kali tetap memicu onChange
+    e.target.value = ""; 
   }
 
   return (

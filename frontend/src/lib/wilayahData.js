@@ -1,4 +1,3 @@
-// src/lib/wilayahData.js
 // Mengubah data BE (pospam + akun admin) menjadi daftar wilayah yang dipakai dashboard.
 import { JATENG_BOUNDS } from "@/lib/mapConfig";
 import { buildOutline, buildEllipse, boundsOf } from "@/lib/coverage";
@@ -15,14 +14,12 @@ function inJateng(lat, lng) {
 }
 
 export function buildWilayahList(rows = [], admins = []) {
-  // region -> nama polres (dari akun admin); akun aktif diutamakan
   const namaByRegion = new Map();
   for (const a of admins) {
     if (a.role === "super_admin" || !a.region || !a.name) continue;
     if (!namaByRegion.has(a.region) || a.is_active !== false) namaByRegion.set(a.region, a.name);
   }
 
-    // Region milik admin nonaktif disembunyikan (data tetap ada di database)
   const inactiveRegions = new Set(
     admins
       .filter((a) => a.role !== "super_admin" && a.region && a.is_active === false)
@@ -50,8 +47,6 @@ export function buildWilayahList(rows = [], admins = []) {
     groups.get(r.region).push(pospam);
   }
 
-  // Warna dibagi berurutan menurut nama region, jadi wilayah bertetangga tidak kembar warna
-  // selama jumlah wilayah tidak melebihi jumlah warna di PALETTE
   const colorIndex = new Map([...groups.keys()].sort().map((region, i) => [region, i]));
 
   return [...groups.entries()]
@@ -63,9 +58,9 @@ export function buildWilayahList(rows = [], admins = []) {
         nama: namaByRegion.get(region) ?? region,
         color: PALETTE[colorIndex.get(region) % PALETTE.length],
         pospam,
-        outline: buildOutline(valid), // garis titik terluar (zoom dekat); [] kalau belum ada titik valid
-        ellipse: buildEllipse(valid), // lingkaran/lonjong penutup (zoom jauh); [] kalau belum ada titik valid
-        bounds: boundsOf(valid.map((p) => [p.lat, p.lng])), // null kalau belum ada titik valid
+        outline: buildOutline(valid), 
+        ellipse: buildEllipse(valid), 
+        bounds: boundsOf(valid.map((p) => [p.lat, p.lng])), 
       };
     })
     .sort((a, b) => a.nama.localeCompare(b.nama, "id"));
