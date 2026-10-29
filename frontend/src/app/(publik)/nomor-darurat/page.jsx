@@ -18,7 +18,6 @@ import { getEmergencyApi, getPospamsApi, NASIONAL } from "@/lib/api";
 import RegionSearch from "../components/regionSearch";
 import CallConfirmDialog from "../components/callConfirmDialog";
 
-// Ikon per kategori (sama dengan halaman kelola nomor darurat di admin; kategori disimpan huruf kecil)
 const CATEGORY_ICON = {
   bencana: Flame,
   medis: Hospital,
@@ -28,7 +27,7 @@ const CATEGORY_ICON = {
   Lainnya: PhoneCall,
 };
 
-const TAMPIL_AWAL = 5; // jumlah layanan sekitar yang tampil sebelum "Tampilkan semua"
+const TAMPIL_AWAL = 5;
 
 const toNum = (v) => {
   if (v == null || v === "") return null;
@@ -52,8 +51,6 @@ function formatDistance(km) {
   return `${Number(km.toFixed(1))} Km`;
 }
 
-// Logo instansi tanpa kotak/latar di sekelilingnya; kalau gambar kosong atau gagal dimuat,
-// tampil ikon telepon
 function NasionalIcon({ src }) {
   const [failed, setFailed] = useState(false);
 
@@ -75,7 +72,6 @@ function NasionalIcon({ src }) {
 
 export default function NomorDaruratPage() {
   const [items, setItems] = useState([]);
-  // Titik pospam: dipakai HANYA untuk mendeteksi wilayah lokasi pemudik (sama seperti halaman Pospam Terdekat)
   const [pospamPoints, setPospamPoints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -85,7 +81,6 @@ export default function NomorDaruratPage() {
   const [isLoadingLoc, setIsLoadingLoc] = useState(false);
   const [locError, setLocError] = useState("");
   const [showAll, setShowAll] = useState(false);
-  // Instansi yang sedang menunggu konfirmasi panggilan (null = dialog tertutup)
   const [callTarget, setCallTarget] = useState(null);
 
   useEffect(() => {
@@ -97,7 +92,6 @@ export default function NomorDaruratPage() {
       })
       .finally(() => setLoading(false));
 
-    // Gagal memuat pospam tidak boleh mengganggu daftar nomor darurat
     getPospamsApi({ limit: 1000 })
       .then((res) => {
         const arr = Array.isArray(res) ? res : res?.data || [];
@@ -114,7 +108,6 @@ export default function NomorDaruratPage() {
       .catch((err) => console.error("Gagal ambil data pospam:", err));
   }, []);
 
-  // Nomor nasional (grid ikon) dan layanan lokal (punya koordinat) dipisah dari satu sumber data
   const nasional = useMemo(() => items.filter((n) => n.region === NASIONAL), [items]);
   const lokal = useMemo(
     () =>
@@ -124,7 +117,6 @@ export default function NomorDaruratPage() {
     [items]
   );
 
-  // Daftar wilayah = gabungan wilayah pospam dan wilayah layanan lokal (supaya sama dengan Pospam Terdekat)
   const availableRegions = useMemo(
     () =>
       Array.from(
@@ -137,7 +129,6 @@ export default function NomorDaruratPage() {
     [pospamPoints, lokal]
   );
 
-  // Daftar "Layanan di sekitar anda". null = belum ada wilayah dipilih dan lokasi belum aktif
   const layanan = useMemo(() => {
     const target = region.toLowerCase().trim();
     if (!target && !userCoords) return null;
@@ -174,10 +165,6 @@ export default function NomorDaruratPage() {
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-
-        // Wilayah lokasi pemudik = wilayah POSPAM terdekat (sama dengan halaman Pospam Terdekat).
-        // Layanan darurat tidak ada di semua kabupaten/kota, jadi tidak cocok dipakai untuk
-        // menentukan wilayah. Kalau data pospam kosong, baru pakai layanan lokal sebagai cadangan.
         const sumber = pospamPoints.length > 0 ? pospamPoints : lokal;
         let detected = "";
         let min = Infinity;
@@ -202,7 +189,6 @@ export default function NomorDaruratPage() {
     );
   };
 
-  // Kembali ke state awal (kosong), sama seperti halaman Pospam Terdekat
   const handleResetLokasi = () => {
     setUserCoords(null);
     setRegion("");
