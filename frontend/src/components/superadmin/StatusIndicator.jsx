@@ -1,4 +1,3 @@
-// src/components/superadmin/StatusIndicator.jsx
 export default function StatusIndicator({ current, total, label = "Jumlah Pospam" }) {
   return (
     <span className="whitespace-nowrap rounded-md border border-gray-300 bg-white px-3.5 py-2 text-sm text-gray-500">

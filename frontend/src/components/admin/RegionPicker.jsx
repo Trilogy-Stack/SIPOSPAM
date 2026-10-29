@@ -11,7 +11,6 @@ const PROVINCE = "Jawa Tengah";
 const titleCase = (s) => s.toLowerCase().replace(/(^|\s)\S/g, (c) => c.toUpperCase());
 const formatCity = (s) => titleCase(s).replace(/^Kabupaten /, "Kab. ");
 
-// Disiapkan sekali saat file dimuat: nama dirapikan, duplikat dibuang, diurutkan
 const WILAYAH = Object.entries(rawWilayah)
   .map(([city, districts]) => ({
     city: formatCity(city),
@@ -23,22 +22,19 @@ const WILAYAH = Object.entries(rawWilayah)
 
 export const EMPTY_REGION = { province: PROVINCE, city: "", district: "" };
 
-// Teks yang ditampilkan dan dikirim ke backend: "Sidorejo, Kota Salatiga"
 export const formatRegion = (r) => {
   if (!r) return "";
   if (typeof r === "string") return r;
   return r.district ? `${r.district}, ${r.city}` : "";
 };
 
-// Kembalikan teks area tersimpan ("Sidorejo, Kota Salatiga") menjadi objek wilayah
 export const parseRegion = (area) => {
   if (!area || typeof area !== "string") return EMPTY_REGION;
   const parts = area.split(",").map((s) => s.trim()).filter(Boolean);
-  if (parts.length < 2) return EMPTY_REGION; // format tidak dikenali
+  if (parts.length < 2) return EMPTY_REGION;
   return { province: PROVINCE, district: parts[0], city: parts[1] };
 };
 
-// Kata kunci pencarian peta dari wilayah yang dipilih
 export const regionToQueries = (r) => {
   if (!r || typeof r === "string" || !r.district) return { main: "", fallback: "" };
   const city = r.city.replace(/^Kab\. /, "Kabupaten ");
@@ -60,7 +56,6 @@ export default function RegionPicker({ value, onChange, required = true }) {
   const [draft, setDraft] = useState(EMPTY_REGION);
   const searchRef = useRef(null);
 
-  // Fokus ke kolom cari saat panel dibuka atau pindah tab
   useEffect(() => {
     if (open) searchRef.current?.focus();
   }, [open, tab]);
@@ -93,17 +88,16 @@ export default function RegionPicker({ value, onChange, required = true }) {
       setDraft({ ...EMPTY_REGION, city: opt });
       setTab("district");
     } else {
-      onChange({ ...draft, district: opt }); // kecamatan dipilih → selesai
+      onChange({ ...draft, district: opt }); 
       setOpen(false);
     }
   };
 
   const clear = () => onChange(EMPTY_REGION);
 
-  const text = formatRegion(value); // nilai yang sudah final (dipakai untuk validasi)
+  const text = formatRegion(value); 
   const activeTab = TABS.find((t) => t.key === tab);
 
-  // Saat panel terbuka dan kab/kota sudah dipilih, tampilkan langsung di kolom
   const choosingDistrict = open && draft.city && !draft.district;
   const shownText = choosingDistrict ? draft.city : text;
 

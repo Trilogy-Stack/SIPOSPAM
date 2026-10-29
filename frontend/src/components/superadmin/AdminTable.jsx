@@ -1,4 +1,3 @@
-// src/components/superadmin/AdminTable.jsx
 import { Mail, Pencil, RotateCcw, Trash2 } from "lucide-react";
 
 export default function AdminTable({ admins, onEdit, onDelete, onReactivate, onDeletePermanent, busyId }) {

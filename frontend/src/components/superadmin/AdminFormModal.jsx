@@ -1,4 +1,3 @@
-// src/components/superadmin/AdminFormModal.jsx
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Modal, { setUnsavedHandler } from "@/components/shared/ui/Modal";
@@ -18,9 +17,8 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const pendingRef = useRef(null); // aksi tertunda (mis. pindah menu) sampai pengguna memutuskan
+  const pendingRef = useRef(null); 
 
-  // Isi form saat dibuka: data admin kalau edit, kosong kalau tambah baru
   useEffect(() => {
     if (open) {
       setName(initialData?.name ?? "");
@@ -34,14 +32,12 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
     }
   }, [open, initialData]);
 
-  // Ada isian yang berubah dibanding saat dialog dibuka?
   const dirty =
     name !== (initialData?.name ?? "") ||
     region !== (initialData?.region ?? "") ||
     email !== (initialData?.email ?? "") ||
     password !== "";
 
-  // Selama ada perubahan, daftarkan penjaga: klik menu navbar akan minta konfirmasi dulu
   useEffect(() => {
     if (!open || !dirty || saving) return;
     setUnsavedHandler((proceed) => {
@@ -51,7 +47,6 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
     return () => setUnsavedHandler(null);
   }, [open, dirty, saving]);
 
-  // Klik area luar / Batal / Esc
   function requestClose() {
     if (saving) return;
     if (dirty) {
@@ -71,7 +66,7 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
     pendingRef.current = null;
     setConfirmOpen(false);
     onClose();
-    next?.(); // lanjutkan pindah menu kalau sebelumnya ada yang tertunda
+    next?.();
   }
 
   async function handleSubmit(e) {
@@ -85,7 +80,7 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
         email: email.trim(),
         password,
       });
-      onClose(); // hanya menutup kalau berhasil
+      onClose();
     } catch (err) {
       setError(err.message || "Gagal menyimpan data");
     } finally {
@@ -97,7 +92,6 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
     <>
       <Modal
         open={open}
-        // Esc diabaikan selagi dialog konfirmasi terbuka
         onClose={confirmOpen ? undefined : requestClose}
         title={isEdit ? "Edit Akun Admin" : "Tambah Akun Admin"}
       >
@@ -162,7 +156,7 @@ export default function AdminFormModal({ open, onClose, onSave, initialData = nu
             </div>
           )}
 
-{/* tambahkan border */}
+          {/* tambahkan border */}
           <div className="mt-3 flex justify-flex gap-3">
             <button
               type="button"

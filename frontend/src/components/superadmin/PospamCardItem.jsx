@@ -1,5 +1,3 @@
-// src/components/superadmin/PospamCardItem.jsx
-
 // "0812-3456-789" / "+62 812..." -> "62812..." (format wa.me)
 function waNumber(nomor) {
   let d = String(nomor || "").replace(/\D/g, "");
@@ -24,7 +22,6 @@ export default function PospamCardItem({ nomor, pospam }) {
     ? `https://www.google.com/maps/search/?api=1&query=${pospam.lat},${pospam.lng}`
     : null;
 
-  // Kotak 44px: gradasi lembut -> putih, border tipis, naik sedikit saat hover
   const btn =
     "group flex h-11 w-11 items-center justify-center rounded-xl border bg-gradient-to-br to-white shadow-sm transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1BA3BA] active:scale-95";
   const btnOff = "cursor-not-allowed border-gray-200 from-gray-100 opacity-50 grayscale";
