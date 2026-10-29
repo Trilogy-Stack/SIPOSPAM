@@ -1,12 +1,5 @@
-// src/lib/coverage.js
-// Bentuk area per wilayah di peta, dihitung dari titik-titik pospam (tanpa buffer/lingkaran per titik):
-//   - buildOutline : garis keliling yang menghubungkan titik pospam terluar (dipakai saat zoom dekat)
-//   - buildEllipse : lingkaran/lonjong sederhana yang menutupi semua titik (dipakai saat zoom jauh)
-// Semua perhitungan dilakukan dalam meter lokal (bukan derajat) supaya bentuknya tidak melar.
-
 const M_PER_DEG_LAT = 111320;
 
-// ---------- Proyeksi lat/lng <-> meter lokal ----------
 function makeProjection(points) {
   const lat0 = points.reduce((s, p) => s + p.lat, 0) / points.length;
   const lng0 = points.reduce((s, p) => s + p.lng, 0) / points.length;
@@ -18,11 +11,9 @@ function makeProjection(points) {
   };
 }
 
-// ---------- Geometri dasar (titik berformat [x, y]) ----------
 const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
-// Convex hull (monotone chain), hasil berlawanan arah jarum jam
 function convexHull(points) {
   const pts = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   if (pts.length < 3) return pts;
@@ -43,7 +34,6 @@ function convexHull(points) {
   return lower.concat(upper);
 }
 
-// Dua ruas p1-p2 dan p3-p4 saling memotong (titik ujung yang sama tidak dihitung)
 function segmentsCross(p1, p2, p3, p4) {
   const d1 = cross(p3, p4, p1);
   const d2 = cross(p3, p4, p2);
@@ -52,7 +42,6 @@ function segmentsCross(p1, p2, p3, p4) {
   return ((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0));
 }
 
-// p berada di dalam segitiga a-b-c (tepi tidak dihitung)
 function inTriangle(p, a, b, c) {
   const d1 = cross(a, b, p);
   const d2 = cross(b, c, p);
@@ -60,7 +49,6 @@ function inTriangle(p, a, b, c) {
   return (d1 > 0 && d2 > 0 && d3 > 0) || (d1 < 0 && d2 < 0 && d3 < 0);
 }
 
-// Rata-rata jarak tiap titik ke tetangga terdekatnya: ukuran "jarak antar pospam yang wajar"
 function meanNearestDistance(pts) {
   let sum = 0;
   for (const p of pts) {
@@ -134,8 +122,6 @@ function concaveHull(pts, concavity) {
   return hull;
 }
 
-// Garis keliling titik pospam terluar, format [[lat, lng], ...] siap untuk Leaflet:
-//   >= 3 titik berbeda -> poligon, 2 titik -> garis lurus, 1 titik -> 1 koordinat, kosong -> []
 export function buildOutline(points, concavity = 2.5) {
   if (!points.length) return [];
   const { toXY, toLatLng } = makeProjection(points);
