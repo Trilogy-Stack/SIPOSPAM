@@ -1,4 +1,3 @@
-// src/app/superadmin/layout.jsx
 import Navbar from "@/components/shared/ui/Navbar";
 
 const menuSuperadmin = [

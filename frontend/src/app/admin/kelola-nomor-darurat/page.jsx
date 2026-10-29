@@ -62,7 +62,6 @@ const inputClass =
   "w-full border border-slate-200 rounded-md px-3 py-2 text-xs md:text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:border-[#1a9fb8]";
 const labelClass = "block text-xs md:text-sm text-slate-600 font-medium mb-1.5";
 
-// ISO -> dd/mm/yyyy, HH:mm WIB
 const fmtTanggal = (iso) => {
   if (!iso) return "-";
   const d = new Date(iso);
@@ -78,7 +77,7 @@ export default function KelolaNomorDaruratPage() {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [mode, setMode] = useState(null); // null | "add" | "edit"
+  const [mode, setMode] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [currentArea, setCurrentArea] = useState("");
@@ -90,20 +89,16 @@ export default function KelolaNomorDaruratPage() {
   const focus = regionToQueries(pickedRegion);
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  // ---------- Peringatan perubahan belum disimpan ----------
   const snapshot = () => JSON.stringify({ form });
   const dirty = !!mode && !!baseline && snapshot() !== baseline;
 
   useUnsavedChanges(dirty);
   const confirmLeaveForm = () => !dirty || window.confirm(UNSAVED_MESSAGE);
 
-  // Catat kondisi awal setiap form dibuka atau ditutup
   useEffect(() => {
     setBaseline(mode ? snapshot() : "");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode, selectedId]);
 
-  // ---------- Data ----------
   const fetchList = async () => {
     const scope = getRegionScope(profile);
     if (!scope.ready) return;
@@ -131,11 +126,8 @@ export default function KelolaNomorDaruratPage() {
 
   useEffect(() => {
     fetchList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.role, profile?.region]);
 
-  // ---------- Form ----------
-  // Kategori hanya boleh satu (tampil seperti checkbox, berperilaku seperti radio)
   const pickCategory = (cat) =>
     setForm((f) => ({ ...f, category: f.category === cat ? "" : cat }));
 
@@ -170,7 +162,6 @@ export default function KelolaNomorDaruratPage() {
     setPickedRegion(null);
   };
 
-  // ---------- Simpan & Hapus ----------
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (saving) return;
@@ -186,7 +177,7 @@ export default function KelolaNomorDaruratPage() {
 
   const namaSudahAda = list.some(
   (p) =>
-    p.id !== selectedId && (p.area || "") === formatRegion(form.region) // saat edit, diri sendiri tidak dihitung
+    p.id !== selectedId && (p.area || "") === formatRegion(form.region)
     (p.agency_name || "").trim().toLowerCase() === form.name.trim().toLowerCase()
   );
   
@@ -215,13 +206,12 @@ export default function KelolaNomorDaruratPage() {
       };
 
       if (mode === "add") {
-        // region wajib lolos validasi; untuk admin wilayah akan ditimpa backend dari akun login
         await createEmergency({
           ...payload,
           region: form.region?.city || areaStr || "-",
         });
       } else {
-        await updateEmergency(selectedId, payload); // region sengaja tidak dikirim
+        await updateEmergency(selectedId, payload);
       }
 
       const wasAdd = mode === "add";

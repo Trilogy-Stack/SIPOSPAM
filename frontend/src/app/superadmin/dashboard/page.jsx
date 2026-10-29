@@ -1,4 +1,3 @@
-// src/app/superadmin/dashboard/page.jsx
 "use client";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
@@ -11,16 +10,13 @@ import { getPospamAll, getAdminList } from "@/lib/api";
 import { buildWilayahList } from "@/lib/wilayahData";
 import { mockWilayahList } from "@/mocks/wilayah";
 
-// Peta hanya dirender di browser (Leaflet butuh window)
 const MapContainer = dynamic(() => import("@/components/shared/map/MapContainer"), { ssr: false });
 
-// true = pakai data dummy (src/mocks/wilayah.js)
 const USE_MOCK = false;
 
 const norm = (s) => s.trim().toLowerCase();
 const countPospam = (list) => list.reduce((n, w) => n + w.pospam.length, 0);
 
-// Ubah data dummy ke bentuk baris BE
 const mockRows = () =>
   mockWilayahList.flatMap((w) =>
     w.pospam.map((p) => ({
@@ -42,7 +38,6 @@ export default function SuperadminDashboard() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(null);
 
-  // Ambil pospam + akun admin (untuk nama polres), lalu kelompokkan per wilayah
   const load = useCallback(async () => {
     setLoadError("");
     try {
@@ -69,13 +64,11 @@ export default function SuperadminDashboard() {
   const wilayahOptions = useMemo(() => wilayahList.map((w) => w.nama), [wilayahList]);
   const selectedWilayah = wilayahList.find((w) => w.id === selectedId) ?? null;
 
-  // Hasil pencarian untuk daftar akordeon
   const q = search.toLowerCase();
   const filtered = wilayahList.filter(
     (w) => w.nama.toLowerCase().includes(q) || w.region.toLowerCase().includes(q)
   );
 
-  // Jumlah pospam yang sedang ditampilkan dari total semua wilayah
   const totalPospam = countPospam(wilayahList);
   const currentPospam = countPospam(selectedWilayah ? [selectedWilayah] : filtered);
   const invalidCount = wilayahList.reduce(
@@ -83,14 +76,12 @@ export default function SuperadminDashboard() {
     0
   );
 
-  // Wilayah terpilih kalau teks pencarian persis sama dengan namanya
   const handleSearchChange = (value) => {
     setSearch(value);
     const match = wilayahList.find((w) => norm(w.nama) === norm(value));
     setSelectedId(match?.id ?? null);
   };
 
-  // klik poligon/pin di peta kemudian samakan isi search bar
   const handleSelectRegion = (wilayah) => {
     setSelectedId(wilayah?.id ?? null);
     setSearch(wilayah ? wilayah.nama : "");

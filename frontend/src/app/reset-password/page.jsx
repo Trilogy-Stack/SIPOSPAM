@@ -37,8 +37,6 @@ export default function ResetPasswordPage() {
   const fromLink = useRef(null);
 
   useEffect(() => {
-    // Dicatat sekali: Supabase menghapus kode dari URL setelah dipakai,
-    // jadi harus dibaca sebelum klien dibuat.
     if (fromLink.current === null) {
       const query = new URLSearchParams(window.location.search);
       const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
@@ -47,8 +45,6 @@ export default function ResetPasswordPage() {
         !linkError && (query.has("code") || query.has("token_hash") || hash.has("access_token"));
     }
 
-    // Tanpa link dari email, form tidak ditampilkan (mencegah pengguna yang sedang login
-    // mengganti password tanpa konfirmasi lewat email).
     if (!fromLink.current) {
       setStatus("invalid");
       return;
@@ -96,7 +92,6 @@ export default function ResetPasswordPage() {
     }
 
     setStatus("done");
-    // Langsung ke dashboard sesuai peran, tanpa login ulang
     setTimeout(async () => {
       try {
         const me = await getMe();
