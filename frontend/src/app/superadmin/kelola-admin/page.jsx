@@ -1,7 +1,7 @@
 // src/app/superadmin/kelola-admin/page.jsx
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Plus, UserX } from "lucide-react";
+import { Plus } from "lucide-react";
 import AdminTable from "@/components/superadmin/AdminTable";
 import AdminFormModal from "@/components/superadmin/AdminFormModal";
 import EmptyState from "@/components/superadmin/EmptyState";
@@ -285,7 +285,6 @@ export default function KelolaAdminPage() {
         onClose={closeDeactivate}
         onConfirm={handleConfirmDeactivate}
         title="Nonaktifkan Akun Admin"
-        icon={UserX}
         confirmLabel="Nonaktifkan"
         loading={deactivating}
         error={deactivateError}

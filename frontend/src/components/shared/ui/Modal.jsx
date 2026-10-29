@@ -6,24 +6,14 @@ import { useEffect, useRef } from "react";
 // Form memasang handler saat ada perubahan; Navbar memanggil runWithUnsavedGuard
 // sebelum pindah halaman supaya pengguna ditanya dulu.
 
-// export function setUnsavedHandler(fn) {
-//   unsavedHandler = fn;
-// }
 export function setUnsavedHandler(fn) {
   if (typeof window !== "undefined") window.__unsavedHandler = fn;
 }
 
-// export function hasUnsavedChanges() {
-//   return !!unsavedHandler;
-// }
 export function hasUnsavedChanges() {
   return typeof window !== "undefined" && !!window.__unsavedHandler;
 }
 
-// export function runWithUnsavedGuard(proceed) {
-//   if (unsavedHandler) unsavedHandler(proceed);
-//   else proceed();
-// }
 export function runWithUnsavedGuard(proceed) {
   if (typeof window !== "undefined" && window.__unsavedHandler) {
     window.__unsavedHandler(proceed);

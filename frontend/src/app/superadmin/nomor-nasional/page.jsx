@@ -1,7 +1,7 @@
 // src/app/superadmin/nomor-nasional/page.jsx
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import NomorNasionalTable from "@/components/superadmin/NomorNasionalTable";
 import NomorNasionalFormModal from "@/components/superadmin/NomorNasionalFormModal";
 import EmptyState from "@/components/superadmin/EmptyState";
@@ -164,7 +164,6 @@ export default function NomorNasionalPage() {
         onClose={closeDelete}
         onConfirm={handleConfirmDelete}
         title="Hapus Nomor Nasional"
-        icon={Trash2}
         confirmLabel="Hapus"
         loading={deleting}
         error={deleteError}

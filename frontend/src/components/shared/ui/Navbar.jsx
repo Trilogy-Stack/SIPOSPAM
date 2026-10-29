@@ -33,7 +33,6 @@ function Logo({ title, onClick }) {
 function RoleBadge({ children }) {
   return (
     <span className="hidden items-center gap-3 sm:flex">
-      {/* <span className="h-8 w-px bg-white/20" aria-hidden="true" /> */}
       <span className="rounded-md border border-[#2BA3B8]/50 bg-[#2BA3B8]/15 px-2.5 py-1 text-[11px] font-semibold uppercase leading-none tracking-[0.16em] text-[#7FD3E0]">
         {children}
       </span>

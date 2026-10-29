@@ -1,6 +1,5 @@
 // src/components/shared/ui/ConfirmDialog.jsx
 "use client";
-// import { AlertTriangle } from "lucide-react";
 import Modal from "./Modal";
 
 // Dialog konfirmasi aksi berisiko (hapus / nonaktifkan). Semua isi rata tengah.
@@ -20,9 +19,6 @@ export default function ConfirmDialog({
   return (
     <Modal open={open} onClose={loading ? undefined : onClose} title={title}>
       <div className="flex flex-col items-center text-center">
-        {/* <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500 ring-8 ring-red-50/60">
-          <Icon size={22} />
-        </span> */}
 
         <div className="text-sm leading-relaxed text-gray-600">{children}</div>
 

@@ -9,31 +9,12 @@ import PospamCardList from "@/components/superadmin/PospamCardList";
 import EmptyState from "@/components/superadmin/EmptyState";
 import { getPospamAll, getAdminList } from "@/lib/api";
 import { buildWilayahList } from "@/lib/wilayahData";
-import { mockWilayahList } from "@/mocks/wilayah";
 
 // Peta hanya dirender di browser (Leaflet butuh window)
 const MapContainer = dynamic(() => import("@/components/shared/map/MapContainer"), { ssr: false });
 
-// true = pakai data dummy (src/mocks/wilayah.js)
-const USE_MOCK = false;
-
 const norm = (s) => s.trim().toLowerCase();
 const countPospam = (list) => list.reduce((n, w) => n + w.pospam.length, 0);
-
-// Ubah data dummy ke bentuk baris BE
-const mockRows = () =>
-  mockWilayahList.flatMap((w) =>
-    w.pospam.map((p) => ({
-      id: p.id,
-      name: p.nama,
-      region: w.nama,
-      location: p.lokasi,
-      facility: p.fasilitas,
-      koor_phone: p.telepon,
-      latitude: p.lat,
-      longitude: p.lng,
-    }))
-  );
 
 export default function SuperadminDashboard() {
   const [wilayahList, setWilayahList] = useState([]);
@@ -42,19 +23,15 @@ export default function SuperadminDashboard() {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(null);
 
-  // Ambil pospam + akun admin (untuk nama polres), lalu kelompokkan per wilayah
+    // mengambil data pospam dan akun admin, kelompokkan per wilayah
   const load = useCallback(async () => {
     setLoadError("");
     try {
-      if (USE_MOCK) {
-        setWilayahList(buildWilayahList(mockRows(), []));
-      } else {
-        const [rows, admins] = await Promise.all([
-          getPospamAll(),
-          getAdminList().catch(() => []),
-        ]);
-        setWilayahList(buildWilayahList(rows, admins));
-      }
+      const [rows, admins] = await Promise.all([
+        getPospamAll(),
+        getAdminList().catch(() => []),
+      ]);
+      setWilayahList(buildWilayahList(rows, admins));
     } catch (err) {
       setLoadError(err.message || "Gagal memuat data pospam");
     } finally {
@@ -75,7 +52,7 @@ export default function SuperadminDashboard() {
     (w) => w.nama.toLowerCase().includes(q) || w.region.toLowerCase().includes(q)
   );
 
-  // Jumlah pospam yang sedang ditampilkan dari total semua wilayah
+  // jumlah pospam yang sedang ditampilkan dari total semua wilayah
   const totalPospam = countPospam(wilayahList);
   const currentPospam = countPospam(selectedWilayah ? [selectedWilayah] : filtered);
   const invalidCount = wilayahList.reduce(

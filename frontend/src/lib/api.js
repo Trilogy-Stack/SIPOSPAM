@@ -71,16 +71,12 @@ export const updateAdmin = (id, data) =>
 export const deleteAdmin = (id, password) =>
   request(`/api/admin/${id}`, { method: "DELETE", body: JSON.stringify({ password }) });
 
-// --- Wilayah (GET publik) ---
-export const getWilayahList = () => request("/api/wilayah", { requireAuth: false });
-
 // --- Nomor Nasional = tabel nomor_darurat dengan region "NASIONAL" ---
 export const NASIONAL = "NASIONAL";
 
 // GET publik; limit maksimal di BE = 1000
 export const getNomorNasionalAll = () =>
   request(`/api/nomor-darurat?region=${NASIONAL}&limit=100`, { requireAuth: false });
-export const getNomorNasionalPublic = getNomorNasionalAll; // alias lama, jaga-jaga masih dipakai
 
 export const createNomorNasional = (data) =>
   request("/api/nomor-darurat", {

@@ -20,15 +20,6 @@ export function isAllowed(role, pathname) {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-export function isProtectedPath(pathname) {
-  return (
-    pathname === "/admin" ||
-    pathname.startsWith("/admin/") ||
-    pathname === "/superadmin" ||
-    pathname.startsWith("/superadmin/")
-  );
-}
-
 // Slot session per area: akun /admin dan /superadmin disimpan di cookie berbeda,
 // sehingga dua role bisa login bersamaan di tab berbeda pada satu browser.
 export const slotFor = (pathname = "") =>
