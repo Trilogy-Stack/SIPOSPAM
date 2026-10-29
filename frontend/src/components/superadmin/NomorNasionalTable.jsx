@@ -1,9 +1,7 @@
-// src/components/superadmin/NomorNasionalTable.jsx
 "use client";
 import { useState } from "react";
 import { Pencil, Phone, Trash2 } from "lucide-react";
 
-// Kotak ikon instansi; kalau gambar kosong atau gagal dimuat, tampil ikon telepon
 function InstansiIcon({ src, alt }) {
   const [failed, setFailed] = useState(false);
 

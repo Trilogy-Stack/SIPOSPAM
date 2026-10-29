@@ -8,7 +8,6 @@ const round = (n) => Math.round(n * 1e6) / 1e6;
 
 const PIN_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="40" viewBox="0 0 24 36"><path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" fill="#dc2626" stroke="#991b1b" stroke-width="1"/><circle cx="12" cy="12" r="4.5" fill="#fff"/></svg>`;
 
-// Susun teks jalan/patokan dari hasil reverse geocoding Nominatim
 function buildStreetText(data) {
   const a = data?.address || {};
   const road = a.road || a.pedestrian || a.footway || a.path || a.hamlet || "";
@@ -17,7 +16,6 @@ function buildStreetText(data) {
   const parts = [road, area].filter(Boolean);
   if (parts.length) return parts.join(", ");
 
-  // Cadangan: dua bagian pertama dari alamat lengkap
   return String(data?.display_name || "")
     .split(",")
     .slice(0, 2)
@@ -26,7 +24,6 @@ function buildStreetText(data) {
     .join(", ");
 }
 
-// Cari nama jalan dari koordinat pin (dipanggil hanya saat pin diatur manual).
 function lookupAddress(s, lat, lng) {
   if (!s.onAddress) return;
 
@@ -53,7 +50,7 @@ function lookupAddress(s, lat, lng) {
   }, 600);
 }
 
-// Menaruh atau memindahkan pin
+
 function placeMarker(s, la, ln, pan) {
   const { L, map } = s;
   if (!L || !map) return;
@@ -112,14 +109,12 @@ export default function MapPicker({
   const ln = toNum(lng);
   const hasPoint = Number.isFinite(la) && Number.isFinite(ln);
 
-  // Selalu pakai callback terbaru
   useEffect(() => {
     stateRef.current.onChange = onChange;
     stateRef.current.onAddress = onAddress;
     stateRef.current.setError = setError;
   });
 
-  // Inisialisasi peta (sekali)
   useEffect(() => {
     const s = stateRef.current;
     let cancelled = false;
@@ -133,13 +128,9 @@ export default function MapPicker({
         scrollWheelZoom: true,
       });
 
-      // Tampilan awal: seluruh Jawa Tengah, atau langsung ke pin kalau sedang edit data
       if (hasPoint) map.setView([la, ln], 16);
       else map.fitBounds(JATENG_BOUNDS);
 
-      // ======================================================================
-      // TILE LAYERS: OpenStreetMap (jalan) + Esri World Imagery (satelit)
-      // ======================================================================
       const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution: "&copy; OpenStreetMap contributors",
@@ -153,17 +144,14 @@ export default function MapPicker({
         }
       );
 
-      // Label nama tempat di atas citra satelit
       const esriLabels = L.tileLayer(
         "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
         { maxZoom: 19 }
       );
       const satelit = L.layerGroup([esriImagery, esriLabels]);
 
-      // Tampilan default: OpenStreetMap
       osm.addTo(map);
 
-      // Pilihan layer di pojok kanan atas
       L.control
         .layers(
           {
@@ -196,10 +184,8 @@ export default function MapPicker({
       s.map = null;
       s.marker = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sinkronkan pin kalau lat/lng berubah dari luar
   useEffect(() => {
     const s = stateRef.current;
     if (!ready || !s.map) return;
@@ -219,7 +205,6 @@ export default function MapPicker({
     }
   }, [la, ln, hasPoint, ready]);
 
-  // Arahkan peta ke wilayah yang dipilih
   useEffect(() => {
     const s = stateRef.current;
     if (!ready || !s.map || !focusQuery) return;

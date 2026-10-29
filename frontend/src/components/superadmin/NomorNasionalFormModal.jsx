@@ -1,4 +1,3 @@
-// src/components/superadmin/NomorNasionalFormModal.jsx
 "use client";
 import { useState, useEffect, useRef } from "react";
 import Modal, { setUnsavedHandler } from "@/components/shared/ui/Modal";
@@ -17,7 +16,7 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const pendingRef = useRef(null); // aksi tertunda (mis. pindah menu) sampai pengguna memutuskan
+  const pendingRef = useRef(null);
 
   useEffect(() => {
     setNama(editData?.nama || "");
@@ -30,14 +29,12 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
     pendingRef.current = null;
   }, [editData, open]);
 
-  // Ada isian yang berubah dibanding saat dialog dibuka?
   const dirty =
     nama !== (editData?.nama || "") ||
     nomor !== (editData?.nomor || "") ||
     logoUrl !== (editData?.logoUrl || null) ||
     logoFile !== null;
 
-  // Selama ada perubahan, daftarkan penjaga: klik menu navbar akan minta konfirmasi dulu
   useEffect(() => {
     if (!open || !dirty || saving) return;
     setUnsavedHandler((proceed) => {
@@ -47,7 +44,6 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
     return () => setUnsavedHandler(null);
   }, [open, dirty, saving]);
 
-  // Klik area luar / Batal / Esc
   function requestClose() {
     if (saving) return;
     if (dirty) {
@@ -67,7 +63,7 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
     pendingRef.current = null;
     setConfirmOpen(false);
     onClose();
-    next?.(); // lanjutkan pindah menu kalau sebelumnya ada yang tertunda
+    next?.();
   }
 
   async function handleSubmit(e) {
@@ -82,7 +78,7 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
         logoUrl,
         logoFile,
       });
-      onClose(); // hanya menutup kalau berhasil
+      onClose();
     } catch (err) {
       setError(err.message || "Gagal menyimpan data");
     } finally {
@@ -94,7 +90,6 @@ export default function NomorNasionalFormModal({ open, onClose, onSave, editData
     <>
       <Modal
         open={open}
-        // Esc diabaikan selagi dialog konfirmasi terbuka
         onClose={confirmOpen ? undefined : requestClose}
         title={editData ? "Edit Nomor" : "Tambah Nomor Nasional"}
       >
