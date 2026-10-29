@@ -3,31 +3,11 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
 
-// =============================================================================
-// 🧪 MODE TESTING (WhatsApp)
-// -----------------------------------------------------------------------------
-// true  -> "Lanjutkan" membuka WhatsApp ke NOMOR_WA_TEST (uji coba, tidak menelepon)
-// false -> "Lanjutkan" menelepon nomor instansi yang asli (tel:)
-//
-// Cara menonaktifkan: ubah MODE_TEST_WA jadi false, ATAU comment blok
-// "TESTING (WA)" di dalam handleLanjutkan di bawah.
-// =============================================================================
-const MODE_TEST_WA = true;
-const NOMOR_WA_TEST = "6283127854969"; // 083127854969 (format wa.me: 62xxx tanpa 0 / +)
-
 const telHref = (phone) => `tel:${String(phone || "").replace(/[^\d+]/g, "")}`;
 
-/**
- * Dialog konfirmasi sebelum menghubungi nomor darurat (gaya sama dengan tombol 110).
- *
- * Props:
- *  - target  : { agency_name, telephone } | null  (null = dialog tertutup)
- *  - onClose : () => void
- */
 export default function CallConfirmDialog({ target, onClose }) {
   const [isChecked, setIsChecked] = useState(false);
 
-  // Reset checkbox setiap kali dialog dibuka untuk instansi lain
   useEffect(() => {
     setIsChecked(false);
   }, [target]);
@@ -43,21 +23,6 @@ export default function CallConfirmDialog({ target, onClose }) {
     const { agency_name, telephone } = target;
     tutup();
 
-    // =========================================================================
-    // 🧪 TESTING (WA) - bisa dinonaktifkan: set MODE_TEST_WA = false
-    // atau comment seluruh blok if di bawah ini.
-    // =========================================================================
-    if (MODE_TEST_WA) {
-      const pesan = `Halo, ini uji coba panggilan darurat ke ${agency_name} (${telephone}) - SIPOSPAM`;
-      window.open(
-        `https://wa.me/${NOMOR_WA_TEST}?text=${encodeURIComponent(pesan)}`,
-        "_blank"
-      );
-      return;
-    }
-    // ============================ END TESTING (WA) ===========================
-
-    // 🚀 PRODUCTION: telepon nomor instansi yang asli
     window.location.href = telHref(telephone);
   };
 

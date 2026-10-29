@@ -3,9 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
-// Kolom cari wilayah yang bisa diketik (versi publik).
-// Logikanya mengikuti SearchBar superadmin, tapi tanpa opsi "Semua wilayah"
-// dan dengan gaya yang sama seperti elemen lain di halaman publik.
 export default function RegionSearch({
   value,
   onChange,
@@ -19,7 +16,6 @@ export default function RegionSearch({
   const inputRef = useRef(null);
   const listRef = useRef(null);
 
-  // Tutup dropdown kalau klik di luar atau tekan Esc
   useEffect(() => {
     const handleClick = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
@@ -35,14 +31,11 @@ export default function RegionSearch({
     };
   }, []);
 
-  // Kalau isi input persis sama dengan salah satu opsi (hasil pilihan),
-  // tampilkan semua opsi lagi, bukan hanya opsi itu
   const norm = (s) => s.trim().toLowerCase();
   const exactMatch = options.some((o) => norm(o) === norm(text));
   const query = exactMatch ? "" : norm(text);
   const items = options.filter((o) => o.toLowerCase().includes(query));
 
-  // Gulirkan item yang disorot (navigasi keyboard) agar tetap terlihat
   useEffect(() => {
     if (open && active >= 0) {
       listRef.current?.children[active]?.scrollIntoView({ block: "nearest" });
@@ -58,7 +51,7 @@ export default function RegionSearch({
   const handleInput = (e) => {
     onChange(e.target.value);
     setOpen(true);
-    setActive(0); // Enter langsung memilih hasil teratas
+    setActive(0);
   };
 
   const handleKeyDown = (e) => {
