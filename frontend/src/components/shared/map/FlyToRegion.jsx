@@ -1,4 +1,3 @@
-// src/components/shared/map/FlyToRegion.jsx
 "use client";
 import { useEffect } from "react";
 import { useMap } from "react-leaflet";

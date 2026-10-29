@@ -1,16 +1,11 @@
-// src/components/shared/map/RegionOverlay.jsx
 "use client";
+
 import { useMemo } from "react";
 import { Polygon, Polyline, Tooltip } from "react-leaflet";
 import { cutShapes } from "@/lib/regionShapes";
 
-// detail = true  : garis yang menghubungkan titik pospam terluar (zoom dekat)
-// detail = false : lingkaran/lonjong penutup sederhana (zoom jauh)
-// Berlaku sama untuk semua wilayah, termasuk yang sedang dipilih.
-// Wilayah kecil memotong (melubangi) wilayah besar yang menumpuknya, supaya semua bisa diklik.
 export default function RegionOverlay({ regions, onSelect, selectedId = null, detail = false }) {
-  // Poligon yang akan digambar, terurut dari yang terbesar ke terkecil
-  const polygons = useMemo(() => {
+    const polygons = useMemo(() => { 
     const byId = new Map(regions.map((r) => [r.id, r]));
     const items = regions
       .map((r) => ({ id: r.id, ring: detail ? r.outline : r.ellipse }))

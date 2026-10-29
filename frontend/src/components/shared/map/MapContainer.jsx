@@ -1,5 +1,5 @@
-// src/components/shared/map/MapContainer.jsx
 "use client";
+
 import { useEffect, useState } from "react";
 import { MapContainer as LeafletMap, TileLayer, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -14,7 +14,6 @@ import { Map as MapIcon, Satellite } from "lucide-react";
 const PADDING = [10, 10];
 const FIT_OPTIONS = { padding: PADDING, animate: false };
 
-// Pilihan tampilan peta dasar
 const TILES = {
   peta: {
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -24,17 +23,13 @@ const TILES = {
   satelit: {
     url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     attribution: "Tiles &copy; Esri &mdash; Maxar, Earthstar Geographics, dan kontributor GIS",
-    maxNativeZoom: 18, // di atas level ini citra diperbesar, bukan menjadi kosong
+    maxNativeZoom: 18,
   },
 };
 
-// Bentuk detail (garis titik terluar) muncul saat zoom sudah naik sebanyak ini
-// dari tampilan seluruh Jawa Tengah. Makin kecil = detail muncul lebih cepat saat zoom in.
 const DETAIL_ZOOM_OFFSET = 3;
 
-// Menjaga tampilan Jawa Tengah:
-// - batas zoom-out = tepat satu Jawa Tengah di kotak peta (dihitung ulang tiap ukuran berubah)
-// - kalau fit = true (tidak ada wilayah terpilih), peta dipas-kan ke Jawa Tengah
+// Menjaga tampilan Jawa Tengah
 function JatengView({ fit }) {
   const map = useMap();
 
@@ -54,7 +49,6 @@ function JatengView({ fit }) {
   return null;
 }
 
-// Memberi tahu induk apakah peta sudah cukup di-zoom untuk menampilkan bentuk detail
 function DetailWatcher({ onChange }) {
   const map = useMap();
 
@@ -71,7 +65,7 @@ function DetailWatcher({ onChange }) {
 export default function MapContainer({ wilayahList = [], selectedWilayah, onSelectRegion }) {
   const [detail, setDetail] = useState(false);
 
-  const [mode, setMode] = useState("peta"); // "peta" | "satelit"
+  const [mode, setMode] = useState("peta");
   const tile = TILES[mode];
 
   return (
