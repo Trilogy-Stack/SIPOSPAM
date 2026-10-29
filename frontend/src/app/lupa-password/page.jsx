@@ -45,8 +45,6 @@ export default function LupaPasswordPage() {
         return;
       }
 
-      // Supabase juga menjawab sukses untuk email yang tidak terdaftar,
-      // jadi pesan sukses sengaja dibuat netral.
       setSent(true);
       setCooldown(COOLDOWN_DETIK);
     } catch (err) {
