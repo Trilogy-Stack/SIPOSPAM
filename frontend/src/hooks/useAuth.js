@@ -47,7 +47,7 @@ export function useAuth() {
     const { access_token, refresh_token } = data.session;
 
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000"}/api/auth/me`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL || "https://sipospam.vercel.app"}/api/auth/me`,
       { headers: { Authorization: `Bearer ${access_token}` } }
     );
     const json = await res.json().catch(() => ({}));

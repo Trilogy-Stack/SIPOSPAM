@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { ROLE_PREFIX, isAllowed, homeFor, slotFor, cookieNameFor } from "./lib/rbac";
 
-const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+const API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://sipospam.vercel.app";
 
 export async function proxy(request) {
   if (process.env.DISABLE_AUTH_GUARD === "true") return NextResponse.next();
