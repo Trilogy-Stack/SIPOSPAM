@@ -175,11 +175,14 @@ export default function KelolaNomorDaruratPage() {
       return;
     }
 
-  const namaSudahAda = list.some(
-  (p) =>
-    p.id !== selectedId && (p.area || "") === formatRegion(form.region)
-    (p.agency_name || "").trim().toLowerCase() === form.name.trim().toLowerCase()
+  
+    const namaSudahAda = list.some(
+    (p) =>
+      p.id !== selectedId &&
+      (p.area || "") === formatRegion(form.region) &&
+      (p.agency_name || "").trim().toLowerCase() === form.name.trim().toLowerCase()
   );
+
   
     if (namaSudahAda) {
       toast.warning(`Instansi "${form.name.trim()}" sudah terdaftar. Gunakan nama lain.`);
