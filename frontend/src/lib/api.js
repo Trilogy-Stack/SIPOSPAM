@@ -1,6 +1,6 @@
 import { createClient } from "./supabase";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "https://sipospam.vercel.app";
 
 async function request(path, options = {}) {
   const { requireAuth = true, ...fetchOptions } = options;
