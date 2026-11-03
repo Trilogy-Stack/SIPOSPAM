@@ -5,8 +5,8 @@ import { MapPin, Phone, Mail } from "lucide-react";
 
 const KONTAK = {
   alamat: "Jl. Pahlawan No.1, Mugassari, Kec. Semarang Sel., Kota Semarang, Jawa Tengah 50142",   
-  telepon: "(62) 857-2196-5043",  // format: "(024) 000 0000"
-  email: "poldajateng@gmail.com",    
+  telepon: "(62) 000-0000-0000",  // format: "(024) 000 0000"
+  email: "email.polda.jateng@gmail.com",    
 };
 
 // tampilan responsive
