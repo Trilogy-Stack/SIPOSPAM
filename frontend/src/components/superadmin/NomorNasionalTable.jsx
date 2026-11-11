@@ -27,12 +27,12 @@ export default function NomorNasionalTable({ data, onEdit, onDelete }) {
       {data.map((n) => (
         <div
           key={n.id}
-          className="flex items-center justify-between rounded-lg border border-gray-100 bg-[#F8F8FA] px-6 py-4 shadow-sm transition-shadow hover:shadow-md"
+          className="flex items-center justify-between rounded-lg border border-gray-100 bg-[#F8F8FA] px-3 py-3 sm:px-6 sm:py-4 shadow-sm transition-shadow hover:shadow-md"
         >
           <div className="flex min-w-0 items-center gap-4">
             <InstansiIcon src={n.logoUrl} alt={n.nama} />
             <div className="min-w-0">
-              <p className="truncate text-base font-semibold uppercase tracking-wide text-gray-900">
+              <p className="break-words text-base font-semibold uppercase tracking-wide text-gray-900">
                 {n.nama}
               </p>
               <p className="mt-0.5 flex items-center gap-2 text-sm text-gray-500">
@@ -42,7 +42,7 @@ export default function NomorNasionalTable({ data, onEdit, onDelete }) {
             </div>
           </div>
 
-          <div className="ml-4 flex shrink-0 gap-2">
+          <div className="ml-2 flex shrink-0 gap-2 sm:ml-4">
             <button
               onClick={() => onEdit(n)}
               aria-label={`Edit ${n.nama}`}

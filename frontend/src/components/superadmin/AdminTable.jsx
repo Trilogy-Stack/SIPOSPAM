@@ -8,14 +8,13 @@ export default function AdminTable({ admins, onEdit, onDelete, onReactivate, onD
         return (
           <div
             key={a.id}
-            className={`flex items-center justify-between rounded-lg border px-6 py-4 shadow-sm transition-shadow hover:shadow-md ${
+            className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border px-3 py-3 sm:px-6 sm:py-4 shadow-sm transition-shadow hover:shadow-md ${ 
               inactive ? "border-gray-200 bg-gray-100/70" : "border-gray-100 bg-[#F8F8FA]"
             }`}
           >
-            <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <p
-                  className={`truncate text-base font-semibold uppercase tracking-wide ${
+            <div className="min-w-0 flex-1 basis-48">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <p className={`truncate text-base font-semibold uppercase tracking-wide ${
                     inactive ? "text-gray-400" : "text-gray-900"
                   }`}
                 >
@@ -42,7 +41,7 @@ export default function AdminTable({ admins, onEdit, onDelete, onReactivate, onD
               </p>
             </div>
 
-            <div className="ml-4 flex shrink-0 gap-2">
+            <div className="flex shrink-0 gap-2">
               {inactive ? (
                 <>
                   <button
