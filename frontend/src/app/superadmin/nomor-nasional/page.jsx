@@ -110,15 +110,15 @@ export default function NomorNasionalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
-      <div className="mx-auto min-h-[600px] w-full max-w-7xl rounded-xl bg-white px-12 pb-10 pt-8 shadow-sm">
+    <div className="min-h-screen bg-[#E9ECF6] px-3 py-3 sm:px-6 sm:py-6 font-poppins">
+      <div className="mx-auto sm:min-h-[600px] w-full max-w-7xl rounded-xl bg-white px-4 pb-6 pt-5 sm:px-8 sm:pb-10 sm:pt-8 lg:px-12 shadow-sm">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-900">Nomor Nasional</h1>
+          <h1 className="text-xl font-semibold text-gray-900 sm:text-2xl">Nomor Nasional</h1>
           <button
             onClick={openAdd}
             className="flex items-center gap-2 rounded-md bg-[#1BA3BA] px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#158aa0]"
           >
-            <Plus size={16} /> Tambah Nomor Nasional
+            <Plus size={16} /> Tambah Nomor
           </button>
         </div>
 

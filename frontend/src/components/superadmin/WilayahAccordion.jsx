@@ -13,17 +13,19 @@ export default function WilayahAccordion({ wilayahList }) {
         return (
           <div
             key={w.id}
-            className="rounded-lg border border-gray-100 bg-[#F8F8FA] px-6 py-4 transition-shadow hover:shadow-sm"
+            className="rounded-lg border border-gray-100 bg-[#F8F8FA] px-3 py-3 sm:px-6 sm:py-4 transition-shadow hover:shadow-sm"
           >
             <button
               onClick={() => setOpenId(open ? null : w.id)}
-              className="flex w-full items-center justify-between text-left"
+              className="flex w-full items-center justify-between gap-3 text-left"
             >
-              <span className="text-base font-semibold uppercase tracking-wide text-gray-900">
-                {i + 1}. {w.nama}
+              <span className="flex min-w-0 items-baseline gap-2 text-base font-semibold uppercase tracking-wide text-gray-900">
+                <span className="shrink-0">{i + 1}.</span>
+                <span>{w.nama}</span>
               </span>
-              <span className="flex items-center gap-3">
-                <span className="text-xs text-gray-500">{w.pospam.length} Pospam</span>
+              <span className="flex shrink-0 items-center gap-3">
+                <span className="whitespace-nowrap text-xs text-gray-500">{w.pospam.length} Pospam</span>
+                {/* tombol panah bulat: biarkan seperti semula */}
                 <span className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-400 text-gray-700 transition-colors hover:border-gray-900 hover:bg-gray-900 hover:text-white">
                   <ChevronLeft
                     size={16}

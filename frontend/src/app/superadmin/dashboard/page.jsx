@@ -50,10 +50,10 @@ export default function SuperadminDashboard() {
 
   const totalPospam = countPospam(wilayahList);
   const currentPospam = countPospam(selectedWilayah ? [selectedWilayah] : filtered);
-  const invalidCount = wilayahList.reduce(
-    (n, w) => n + w.pospam.filter((p) => !p.valid).length,
-    0
+  const invalidList = wilayahList.flatMap((w) =>
+    w.pospam.filter((p) => !p.valid).map((p) => ({ ...p, wilayah: w.nama }))
   );
+  const invalidCount = invalidList.length;
 
   const handleSearchChange = (value) => {
     setSearch(value);
@@ -67,10 +67,10 @@ export default function SuperadminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#E9ECF6] px-6 py-6 font-poppins">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 rounded-xl bg-white px-12 pb-10 pt-6 shadow-sm">
+    <div className="min-h-screen bg-[#E9ECF6] px-3 py-3 sm:px-6 sm:py-6 font-poppins">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 rounded-xl bg-white px-4 pb-6 pt-4 sm:px-8 sm:pb-10 sm:pt-6 lg:px-12 shadow-sm">
         {/* Pencarian + jumlah pospam */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <SearchBar value={search} onChange={handleSearchChange} options={wilayahOptions} />
           <StatusIndicator current={currentPospam} total={totalPospam} />
         </div>
@@ -89,7 +89,7 @@ export default function SuperadminDashboard() {
         )}
 
         {/* Peta sebaran pospam */}
-        <div className="h-[calc(100vh-260px)] min-h-[480px] overflow-hidden rounded-xl">
+        <div className="h-[55vh] min-h-[320px] overflow-hidden rounded-xl sm:h-[calc(100vh-260px)] sm:min-h-[480px]">
           <MapContainer
             wilayahList={wilayahList}
             selectedWilayah={selectedWilayah}
@@ -99,11 +99,20 @@ export default function SuperadminDashboard() {
 
         {/* Koordinat di luar Jateng: tidak digambar di peta, tapi tetap dihitung */}
         {invalidCount > 0 && (
-          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            {invalidCount} pospam tidak tampil di peta karena koordinatnya berada di luar Jawa
-            Tengah. Periksa data latitude/longitude pospam tersebut.
-          </p>
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            <p className="font-medium">
+              {invalidCount} pospam tidak tampil di peta karena koordinatnya di luar Jawa Tengah:
+            </p>
+            <ul className="mt-1 list-disc pl-5">
+              {invalidList.map((p) => (
+                <li key={p.id}>
+                  <span>{p.nama}</span> ({p.wilayah})
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
+        
 
         {/* Daftar pospam: satu wilayah kalau dipilih, semua wilayah kalau tidak */}
         <div className="mt-4">

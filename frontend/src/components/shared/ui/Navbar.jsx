@@ -7,13 +7,13 @@ import ProfileMenu from "./ProfileMenu";
 import ForcePasswordChange from "./ForcePasswordChange";
 import { hasUnsavedChanges, runWithUnsavedGuard } from "./Modal";
 
-function Logo({ title, onClick }) {
+function Logo({ title }) {
   return (
-    <Link
-      href="/"
-      onClick={onClick}
+    <button
+      type="button"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
       aria-label={title}
-      className="inline-flex shrink-0 flex-col items-stretch leading-none"
+      className="inline-flex shrink-0 cursor-pointer flex-col items-stretch leading-none"
     >
       <span className="flex justify-center text-2xl font-extrabold leading-[0.85] tracking-tight drop-shadow-[0_2px_2px_rgba(0,0,0,0.35)]">
         <span className="text-[#2BA3B8]">SI</span>
@@ -24,7 +24,7 @@ function Logo({ title, onClick }) {
           Sistem Informasi Pos Pelayanan &amp; Pengamanan
         </span>
       </span>
-    </Link>
+    </button>
   );
 }
 
@@ -68,7 +68,7 @@ export default function Navbar({ title, items, badge }) {
     <nav className="sticky top-0 z-[1500] bg-[#3F5F6B] px-6 font-poppins text-white shadow-md">
       <div className="mx-auto flex w-full max-w-7xl items-center gap-4 py-3 lg:gap-6 xl:gap-8">
         <div className="flex shrink-0 items-center gap-3 lg:mr-2 xl:mr-6">
-          <Logo title={title} onClick={(e) => guardedClick(e, "/")} />
+          <Logo title={title} />
           {badge && <RoleBadge>{badge}</RoleBadge>}
         </div>
 
