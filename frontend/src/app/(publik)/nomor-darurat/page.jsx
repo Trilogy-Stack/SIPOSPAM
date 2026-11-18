@@ -7,7 +7,7 @@ import {
   Check,
   X,
   Search,
-  Flame,
+  ShieldAlert,
   Hospital,
   Siren,
   PhoneCall,
@@ -19,12 +19,12 @@ import RegionSearch from "../components/regionSearch";
 import CallConfirmDialog from "../components/callConfirmDialog";
 
 const CATEGORY_ICON = {
-  bencana: Flame,
+  bencana: ShieldAlert,
   medis: Hospital,
   keamanan: Siren,
   bbm: Fuel,
   bengkel: Wrench,
-  Lainnya: PhoneCall,
+  lainnya: PhoneCall,
 };
 
 const TAMPIL_AWAL = 5;
@@ -314,9 +314,9 @@ export default function NomorDaruratPage() {
               return (
                 <div
                   key={n.id}
-                  className="flex items-center gap-3 rounded-xl border border-[#17a2b8] bg-white px-3 py-3"
+                  className="flex items-center gap-3 rounded-xl border border-[#1a9fb8] bg-white px-3 py-3"
                 >
-                  <div className="w-10 h-10 rounded-full bg-[#17a2b8] flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-[#1a9fb8] flex items-center justify-center shrink-0">
                     <Icon className="w-5 h-5 text-white" />
                   </div>
 
@@ -332,7 +332,7 @@ export default function NomorDaruratPage() {
                     type="button"
                     onClick={() => setCallTarget(n)}
                     aria-label={`Hubungi ${n.agency_name}`}
-                    className="w-9 h-9 rounded-full bg-[#17a2b8] flex items-center justify-center shrink-0 transition active:scale-95"
+                    className="w-9 h-9 rounded-full bg-[#1a9fb8] flex items-center justify-center shrink-0 transition active:scale-95"
                   >
                     <Phone className="w-4 h-4 text-white" />
                   </button>
