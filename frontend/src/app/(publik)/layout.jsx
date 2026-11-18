@@ -16,10 +16,10 @@ export default function PublikLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col w-full">
-      {/* Header Full-Width Layar */}
+      {/* header full layar */}
       <HeaderTab />
 
-      {/* Konten Utama Tetap Terpusat di Tengah */}
+      {/* konten di tengah */}
       <main className="w-full max-w-6xl mx-auto p-4 md:p-6 flex-1">
         {children}
       </main>
@@ -32,7 +32,7 @@ export default function PublikLayout({ children }) {
                        adaKontak ? "md:grid-cols-[1.5fr_0.8fr_1.4fr]" : "md:grid-cols-[2fr_1fr]"
           }`}
         >
-          {/* Identitas instansi */}
+          {/* identitas instansi */}
           <div className="flex flex-col items-center md:items-start gap-3">
             <div className="flex items-center gap-3">
               <Image
@@ -57,7 +57,7 @@ export default function PublikLayout({ children }) {
             </p>
           </div>
 
-          {/* Menu */}
+          {/* menu */}
           <nav aria-label="Navigasi footer">
             <p className="text-xs md:text-[11px] font-bold uppercase tracking-wider text-white/90">Layanan</p>
             <ul className="mt-2 space-y-1 text-[13px] md:text-xs">
@@ -74,7 +74,7 @@ export default function PublikLayout({ children }) {
             </ul>
           </nav>
 
-          {/* Kontak */}
+          {/* kontak */}
           {adaKontak && (
             <div>
               <p className="text-xs md:text-[11px] font-bold uppercase tracking-wider text-white/90">Kontak</p>
@@ -106,7 +106,7 @@ export default function PublikLayout({ children }) {
           )}
         </div>
 
-        {/* Hak cipta */}
+        {/* hak cipta */}
         <div className="border-t border-white/15">
           <div className="max-w-6xl mx-auto px-4 md:px-6 py-2.5 text-center text-[11px] md:text-[10px] text-white/60">
             &copy; {new Date().getFullYear()} Kepolisian Daerah Jawa Tengah. Seluruh hak dilindungi.
