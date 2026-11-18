@@ -65,7 +65,7 @@ export default function ChangePasswordDialog({ open, forced = false, onClose, on
     try {
       await gantiPassword({ password_lama: lama, password_baru: baru });
       setDone(true);
-      timer.current = setTimeout(() => onDone?.({ password_baru: baru }), 1800);
+      timer.current = setTimeout(() => onDone?.({ password_baru: baru }), 1500);
     } catch (err) {
       setError(err.message || "Gagal mengganti password. Coba lagi.");
       setSaving(false);
