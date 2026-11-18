@@ -283,8 +283,10 @@ export default function NomorDaruratPage() {
                 {/* Logo langsung di atas kartu, tanpa kotak di dalamnya */}
                 <NasionalIcon src={n.icon} />
 
-                <span className="mt-1.5 line-clamp-2 text-center text-[11px] font-bold leading-tight text-slate-800">
-                  {n.agency_name}
+                <span className="mt-1.5 flex h-8 w-full items-start justify-center">
+                  <span className="line-clamp-2 break-words text-center text-[11px] font-bold leading-4 text-slate-800">
+                    {n.agency_name}
+                  </span>
                 </span>
               </button>
             ))}
